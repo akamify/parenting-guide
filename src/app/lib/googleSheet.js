@@ -93,10 +93,10 @@ export async function saveToSheet({
     webinarISO || "",                   // I
     "no",                               // J sentConfirmation
     reminderStatus("1day"),             // K sent1Day
+    reminderStatus("morning"),          // O sentMorning
     reminderStatus("10min"),            // L sent10Min
     reminderStatus("live"),             // M sentLive
     leadId || "",                       // N leadId
-    reminderStatus("morning"),          // O sentMorning
   ]];
 
   const res = await runSheetRequest(() =>
