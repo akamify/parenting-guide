@@ -95,7 +95,7 @@ export async function sendConfirmation({ name, email, phone10, webinarMeta }) {
   return callWaspAkamify({
     campaignName: requireEnv("WASPAKAMIFY_CAMPAIGN_CONFIRM"),
     destination: to91(phone10),
-    // TEMPLATE: {{1}} name, {{2}} webinar name, {{3}} email, {{4}} phone, {{5}} date, {{6}} day, {{7}} time
+    // TEMPLATE: {{1}} name, {{2}} webinar name, {{3}} email, {{4}} phone, {{5}} date, {{6}} day, {{7}} time, {{8}} community URL
     variables: [
       name,
       requireEnv("WEBINAR_EVENT_NAME"),
@@ -104,6 +104,7 @@ export async function sendConfirmation({ name, email, phone10, webinarMeta }) {
       webinarMeta.webinarDate,
       webinarMeta.webinarDay,
       webinarMeta.webinarTime,
+      requireEnv("WHATSAPP_COMMUNITY_URL"),
     ],
   });
 }
@@ -177,7 +178,7 @@ export async function sendLiveNow({ name, phone10, webinarDate, webinarDay, webi
   return callWaspAkamify({
     campaignName: requireEnv("WASPAKAMIFY_CAMPAIGN_LIVE"),
     destination: to91(phone10),
-    // TEMPLATE: {{1}} name, {{2}} webinar name, {{3}} date, {{4}} day, {{5}} time, {{6}} webinar link, {{7}} community URL
+    // TEMPLATE: {{1}} name, {{2}} webinar name, {{3}} date, {{4}} day, {{5}} time, {{6}} webinar link
     variables: [
       name,
       requireEnv("WEBINAR_EVENT_NAME"),
@@ -185,7 +186,6 @@ export async function sendLiveNow({ name, phone10, webinarDate, webinarDay, webi
       webinarDay,
       webinarTime,
       requireEnv("WEBINAR_LINK"),
-      requireEnv("WHATSAPP_COMMUNITY_URL"),
     ],
   });
 }
