@@ -7,8 +7,8 @@ import { isWhatsAppSendingEnabled, sendConfirmation } from "../../lib/waspakamif
 import { getQstashTargetUrl, publishScheduled, toEpochSeconds } from "../../lib/qstash";
 import {
   formatWebinarParts,
-  getMorningReminderDate,
   getNextWebinarDate,
+  getWebinarReminderTimes,
 } from "../../lib/webinar";
 
 // Column J = sentConfirmation
@@ -22,10 +22,6 @@ export async function POST(req) {
     const normalized = validateForm(body);
 
     const phone10 = cleanPhone10(normalized.phone);
-
-    const webinarDT = getNextWebinarDate();
-    const { webinarDay, webinarDate, webinarTime } = formatWebinarParts(webinarDT);
-    const webinarISO = webinarDT.toISOString();
 
     const activeLead = await findActiveLeadByContact({
       email: normalized.email,
@@ -45,6 +41,14 @@ export async function POST(req) {
 
     const leadId = (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`)
       .replace(/[^\w-]/g, "");
+    const registeredAt = new Date();
+    const webinarDT = getNextWebinarDate(registeredAt);
+    const { webinarDay, webinarDate, webinarTime } = formatWebinarParts(webinarDT);
+    const webinarISO = webinarDT.toISOString();
+    const reminders = Object.entries(getWebinarReminderTimes(webinarDT));
+    const skippedReminders = reminders
+      .filter(([, scheduledAt]) => scheduledAt <= registeredAt.getTime())
+      .map(([type]) => type);
 
     // Save the lead before sending or scheduling messages.
     const { rowNumber } = await saveToSheet({
@@ -57,6 +61,7 @@ export async function POST(req) {
       webinarTime,
       webinarISO,
       leadId,
+      skippedReminders,
     });
 
     const whatsappEnabled = isWhatsAppSendingEnabled();
@@ -101,14 +106,6 @@ export async function POST(req) {
         );
       }
 
-      const webinarTs = new Date(webinarISO).getTime();
-      if (Number.isNaN(webinarTs)) throw new Error("Invalid webinarISO");
-
-      const oneDayEpoch = toEpochSeconds(new Date(webinarTs - 24 * 60 * 60 * 1000).toISOString());
-      const morningEpoch = toEpochSeconds(getMorningReminderDate(webinarDT).toISOString());
-      const tenMinEpoch = toEpochSeconds(new Date(webinarTs - 10 * 60 * 1000).toISOString());
-      const liveEpoch = toEpochSeconds(new Date(webinarTs).toISOString());
-
       const payload = {
         rowNumber,
         leadId,
@@ -121,26 +118,14 @@ export async function POST(req) {
         webinarISO,
       };
 
-      await publishScheduled({
-        url: receiverUrl,
-        body: { type: "1day", ...payload },
-        notBeforeEpochSeconds: oneDayEpoch,
-      });
-      await publishScheduled({
-        url: receiverUrl,
-        body: { type: "morning", ...payload },
-        notBeforeEpochSeconds: morningEpoch,
-      });
-      await publishScheduled({
-        url: receiverUrl,
-        body: { type: "10min", ...payload },
-        notBeforeEpochSeconds: tenMinEpoch,
-      });
-      await publishScheduled({
-        url: receiverUrl,
-        body: { type: "live", ...payload },
-        notBeforeEpochSeconds: liveEpoch,
-      });
+      for (const [type, scheduledAt] of reminders) {
+        if (skippedReminders.includes(type)) continue;
+        await publishScheduled({
+          url: receiverUrl,
+          body: { type, ...payload },
+          notBeforeEpochSeconds: toEpochSeconds(scheduledAt),
+        });
+      }
     }
 
     // Mark confirmation status without failing the saved lead.

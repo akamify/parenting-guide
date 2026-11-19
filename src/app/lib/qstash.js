@@ -39,7 +39,9 @@ export async function publishScheduled({ url, body, notBeforeEpochSeconds }) {
     headers: {
       Authorization: `Bearer ${process.env.QSTASH_TOKEN}`,
       "Content-Type": "application/json",
-      "Upstash-Not-Before": String(notBeforeEpochSeconds),
+      ...(notBeforeEpochSeconds > toEpochSeconds(Date.now()) && {
+        "Upstash-Not-Before": String(notBeforeEpochSeconds),
+      }),
     },
     body: JSON.stringify(body),
   });
@@ -65,6 +67,6 @@ export async function verifyQstashRequest({ body, signature, reqUrl }) {
   return receiver.verify({ body, signature, url });
 }
 
-export function toEpochSeconds(isoString) {
-  return Math.floor(new Date(isoString).getTime() / 1000);
+export function toEpochSeconds(timestamp) {
+  return Math.floor(new Date(timestamp).getTime() / 1000);
 }

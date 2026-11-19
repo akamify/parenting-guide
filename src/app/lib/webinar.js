@@ -1,13 +1,12 @@
 // src/app/lib/webinar.js
 const IST_TIME_ZONE = "Asia/Kolkata";
 const SUNDAY = 0;
-const THURSDAY = 4;
-const SATURDAY = 6;
-const SATURDAY_CUTOFF_HOUR = 18;
-const WEBINAR_UTC_HOUR = 14;
+const WEBINAR_UTC_HOUR = 5;
 const WEBINAR_UTC_MINUTE = 30;
 const MORNING_REMINDER_UTC_HOUR = 3;
 const MORNING_REMINDER_UTC_MINUTE = 30;
+const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
 
 function getIstDateParts(date) {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -15,8 +14,6 @@ function getIstDateParts(date) {
     year: "numeric",
     month: "numeric",
     day: "numeric",
-    hour: "numeric",
-    hourCycle: "h23",
   }).formatToParts(date);
   const values = Object.fromEntries(
     parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]),
@@ -26,50 +23,43 @@ function getIstDateParts(date) {
     year: Number(values.year),
     month: Number(values.month),
     day: Number(values.day),
-    hour: Number(values.hour),
   };
 }
 
 export function getNextWebinarDate(now = new Date()) {
   const current = getIstDateParts(now);
-  const currentCalendarDate = new Date(Date.UTC(current.year, current.month - 1, current.day));
-  const currentDay = currentCalendarDate.getUTCDay();
-  const excludeTomorrowSunday =
-    currentDay === SATURDAY && current.hour >= SATURDAY_CUTOFF_HOUR;
-
-  for (let dayOffset = 1; dayOffset <= 7; dayOffset += 1) {
-    const candidate = new Date(currentCalendarDate);
-    candidate.setUTCDate(candidate.getUTCDate() + dayOffset);
-    const candidateDay = candidate.getUTCDay();
-
-    if (candidateDay !== SUNDAY && candidateDay !== THURSDAY) continue;
-    if (excludeTomorrowSunday && dayOffset === 1 && candidateDay === SUNDAY) continue;
-
-    return new Date(
-      Date.UTC(
-        candidate.getUTCFullYear(),
-        candidate.getUTCMonth(),
-        candidate.getUTCDate(),
-        WEBINAR_UTC_HOUR,
-        WEBINAR_UTC_MINUTE,
-      ),
-    );
+  const candidate = new Date(
+    Date.UTC(current.year, current.month - 1, current.day, WEBINAR_UTC_HOUR, WEBINAR_UTC_MINUTE),
+  );
+  const daysUntilSunday = (SUNDAY - candidate.getUTCDay() + 7) % 7;
+  candidate.setUTCDate(candidate.getUTCDate() + daysUntilSunday);
+  if (candidate <= now) {
+    candidate.setUTCDate(candidate.getUTCDate() + 7);
   }
-
-  throw new Error("Unable to calculate the next webinar date");
+  return candidate;
 }
 
-export function getMorningReminderDate(webinarDT) {
+export function getWebinarReminderTimes(webinarDT) {
   const webinar = getIstDateParts(webinarDT);
-  return new Date(
-    Date.UTC(
+  const start = webinarDT.getTime();
+  const isSundayMorningWebinar =
+    webinarDT.getUTCDay() === SUNDAY &&
+    webinarDT.getUTCHours() === WEBINAR_UTC_HOUR &&
+    webinarDT.getUTCMinutes() === WEBINAR_UTC_MINUTE;
+
+  return {
+    // Sunday 11 AM minus 15 hours is Saturday 8 PM. Preserve older bookings' timing.
+    "1day": start - (isSundayMorningWebinar ? 15 : 24) * HOUR_MS,
+    morning: Date.UTC(
       webinar.year,
       webinar.month - 1,
       webinar.day,
       MORNING_REMINDER_UTC_HOUR,
       MORNING_REMINDER_UTC_MINUTE,
     ),
-  );
+    "10min": start - 10 * MINUTE_MS,
+    live: start,
+  };
 }
 
 export function formatWebinarParts(webinarDT) {

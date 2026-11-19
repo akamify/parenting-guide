@@ -75,9 +75,11 @@ export async function saveToSheet({
   webinarTime,
   webinarISO,
   leadId,
+  skippedReminders = [],
 }) {
   const sheets = await getSheets();
   const { spreadsheetId } = getGoogleSheetConfig();
+  const reminderStatus = (type) => skippedReminders.includes(type) ? "skipped" : "no";
 
   const values = [[
     new Date().toLocaleString("en-IN"), // A Timestamp
@@ -90,11 +92,11 @@ export async function saveToSheet({
     webinarTime || "",                  // H
     webinarISO || "",                   // I
     "no",                               // J sentConfirmation
-    "no",                               // K sent1Day
-    "no",                               // L sent10Min
-    "no",                               // M sentLive
-    "no",                               // O sentMorning
+    reminderStatus("1day"),             // K sent1Day
+    reminderStatus("10min"),            // L sent10Min
+    reminderStatus("live"),             // M sentLive
     leadId || "",                       // N leadId
+    reminderStatus("morning"),          // O sentMorning
   ]];
 
   const res = await runSheetRequest(() =>
@@ -114,7 +116,7 @@ export async function saveToSheet({
   return { success: true, rowNumber };
 }
 
-// Find row number by leadId stored in column N
+// Older rows may have the lead ID in O instead of N.
 export async function findRowByLeadId(leadId) {
   if (!leadId) return null;
   const sheets = await getSheets();
@@ -122,14 +124,14 @@ export async function findRowByLeadId(leadId) {
   const res = await runSheetRequest(() =>
     sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: "Sheet1!N:N",
+      range: "Sheet1!N:O",
     })
   );
 
   const rows = res.data.values || [];
   // rows[0] is header
   for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i]?.[0] || "") === String(leadId)) {
+    if (rows[i]?.some((value) => String(value) === String(leadId))) {
       return i + 1; // sheet row number
     }
   }

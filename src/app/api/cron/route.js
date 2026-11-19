@@ -8,11 +8,10 @@ import {
   send10MinReminder,
   sendLiveNow,
 } from "../../lib/waspakamify";
-import { getMorningReminderDate } from "../../lib/webinar";
+import { getWebinarReminderTimes } from "../../lib/webinar";
 
 // 0-based indexes for A:O
 const COL_NAME = 1;         // B
-const COL_EMAIL = 2;        // C
 const COL_PHONE = 3;        // D
 const COL_WEBINAR_DAY = 5;  // F
 const COL_WEBINAR_DATE = 6; // G
@@ -100,10 +99,19 @@ export async function GET(req) {
       }
 
       const webinarDT = new Date(webinarISO);
+      if (!Number.isFinite(webinarDT.getTime())) {
+        console.log("SKIP invalid webinarISO", { sheetRowNumber });
+        sentCount.skipped++;
+        continue;
+      }
+
       const diffMs = webinarDT.getTime() - now.getTime();
       const diffMin = Math.round(diffMs / MIN);
-      const morningReminderDT = getMorningReminderDate(webinarDT);
-      const morningDiffMs = morningReminderDT.getTime() - now.getTime();
+      const reminderTimes = getWebinarReminderTimes(webinarDT);
+      const isDue = (type, status) => {
+        const elapsed = now.getTime() - reminderTimes[type];
+        return status !== "yes" && status !== "skipped" && elapsed >= 0 && elapsed < WINDOW_MS;
+      };
 
       // If confirmation already sent via API, but sheet still says "no"
       if (sentConfirm === "no") {
@@ -111,8 +119,7 @@ export async function GET(req) {
         sentCount.confirm++;
       }
 
-      // 1-day window
-      if (sent1Day !== "yes" && diffMs <= 24 * 60 * MIN && diffMs > (24 * 60 * MIN - WINDOW_MS)) {
+      if (isDue("1day", sent1Day)) {
         await send1DayReminder({ name, phone10, webinarDate, webinarDay, webinarTime });
         await markCell(sheetRowNumber, LETTER_SENT_1DAY, "yes");
         sentCount.oneDay++;
@@ -121,7 +128,7 @@ export async function GET(req) {
       }
 
       // Webinar-day 09:00 AM IST window
-      if (sentMorning !== "yes" && morningDiffMs <= 0 && morningDiffMs > -WINDOW_MS) {
+      if (isDue("morning", sentMorning)) {
         await sendMorningReminder({ name, phone10, webinarDate, webinarDay, webinarTime });
         await markCell(sheetRowNumber, LETTER_SENT_MORNING, "yes");
         sentCount.morning++;
@@ -130,7 +137,7 @@ export async function GET(req) {
       }
 
       // 10-min window
-      if (sent10Min !== "yes" && diffMs <= 10 * MIN && diffMs > (10 * MIN - WINDOW_MS)) {
+      if (isDue("10min", sent10Min)) {
         await send10MinReminder({ name, phone10, webinarDate, webinarDay, webinarTime });
         await markCell(sheetRowNumber, LETTER_SENT_10MIN, "yes");
         sentCount.tenMin++;
@@ -139,7 +146,7 @@ export async function GET(req) {
       }
 
       // Live window
-      if (sentLive !== "yes" && diffMs <= 0 && diffMs > -WINDOW_MS) {
+      if (isDue("live", sentLive)) {
         await sendLiveNow({ name, phone10, webinarDate, webinarDay, webinarTime });
         await markCell(sheetRowNumber, LETTER_SENT_LIVE, "yes");
         sentCount.live++;
