@@ -1,3 +1,4 @@
+import Image from "next/image";
 import React from 'react';
 import { TrendingUp, Award, Users, ArrowRight, GraduationCap, DollarSign } from 'lucide-react';
 
@@ -91,7 +92,7 @@ export default function SuccessStoriesSection() {
             >
               {/* Image and Profit Badge */}
               <div className="relative mb-4">
-                <img
+                <Image width={800} height={600} unoptimized
                   src={story.image}
                   alt={story.name}
                   className="w-full h-48 object-cover rounded-2xl group-hover:scale-110 transition-transform"

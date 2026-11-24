@@ -7,7 +7,10 @@
     "dev:turbo": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test *.test.cjs",
+    "check:production": "node scripts/check-production.cjs",
+    "init:sheet": "node src/app/lib/initGoogleSheet.js"
   },
   "dependencies": {
     "@upstash/qstash": "^2.9.0",
@@ -15,17 +18,20 @@
     "dotenv": "^17.2.3",
     "googleapis": "^170.1.0",
     "lucide-react": "^0.562.0",
-    "next": "16.1.1",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "swiper": "^12.0.3"
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "swiper": "^12.2.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "25.1.0",
     "@types/react": "19.2.10",
     "eslint": "^9",
-    "eslint-config-next": "16.1.1",
+    "eslint-config-next": "^16.4.6",
     "tailwindcss": "^4"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

@@ -1,7 +1,9 @@
 import React from "react";
 
 export const metadata = {
-  title: "Terms of Service | Parenting Guide Academy",
+  alternates: { canonical: "/terms-of-service/" },
+  title: "Terms of Service",
+  openGraph: { title: "Terms of Service", url: "/terms-of-service/" },
   description: "Terms of Service of Parenting Guide Academy - Expert Parenting Workshop",
 };
 
@@ -24,7 +26,7 @@ const Page = () => {
       </header>
 
       {/* Content */}
-      <main className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10">
         <div className="rounded-2xl border bg-white p-5 sm:p-8">
           <TermsBlock title="1) Acceptance of Terms">
             <p>

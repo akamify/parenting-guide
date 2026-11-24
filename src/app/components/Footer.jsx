@@ -1,79 +1,25 @@
-import React from "react";
-import {
-  Heart,
-  Mail,
-  Phone,
-  MapPin,
-  ArrowRight,
-  Shield,
-  Award,
-  Users,
-} from "lucide-react";
+﻿import Image from "next/image";
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 
-export default function Footer() {
+const linkClass = "inline-flex min-h-11 items-center rounded-md text-sm text-[#455745] transition-colors hover:text-[#237344] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#237344]";
+
+export default function Footer({ reserveStickySpace = false }) {
   return (
-    // Background ko light rakha hai (#FDFBF7 - Cream White)
-    <footer className="relative bg-[#FDFBF7] text-[#4A2B12] overflow-hidden pb-[calc(6rem+env(safe-area-inset-bottom,0px))] lg:pb-0 border-t border-stone-200">
-      {/* Background Subtle Effects - Light & Airy */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Soft Green Glow - Top Right */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#3B5E2B]/5 rounded-full blur-[120px]"></div>
-        {/* Soft Brown Glow - Bottom Left */}
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[#D99B38]/5 rounded-full blur-[120px]"></div>
-      </div>
-
-      <div className="relative z-10">
-        <div className="container mx-auto px-2 lg:px-8 py-10">
-          {/* Main Footer Bottom Bar */}
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6 text-sm">
-            {/* Social Proof Section */}
-            <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-full shadow-sm border border-stone-100">
-              <div className="bg-[#3B5E2B]/10 p-1.5 rounded-full">
-                <Users className="w-4 h-4 text-[#3B5E2B]" />
-              </div>
-              <span className="font-bold text-stone-600 tracking-tight">
-                Join 25K+ Mindful Parents
-              </span>
-            </div>
-
-            {/* Copyright Section */}
-            <div className="text-center">
-              <p className="text-stone-500 font-medium">
-                © 2026{" "}
-                <span className="text-[#4A2B12] font-black uppercase tracking-wider">
-                  Pravesh Parenting
-                </span>
-              </p>
-              <p className="text-[10px] text-stone-400 font-bold uppercase tracking-[0.2em] mt-1">
-                Empowering Families Daily
-              </p>
-              <p className="text-[10px] text-stone-400 font-bold uppercase tracking-[0.2em] mt-1">
-                Developed by <b>Akamify</b>
-              </p>
-            </div>
-
-            {/* Legal Links */}
-            <div className="flex items-center gap-8">
-              <Link
-                href="/privacy-policy"
-                className="text-stone-500 hover:text-[#3B5E2B] font-bold transition-all duration-300 hover:translate-y-[-1px]"
-              >
-                Privacy Policy
-              </Link>
-              <Link
-                href="/terms-of-service"
-                className="text-stone-500 hover:text-[#3B5E2B] font-bold transition-all duration-300 hover:translate-y-[-1px]"
-              >
-                Terms of Service
-              </Link>
-            </div>
+    <footer className={`border-t border-[#103723]/12 bg-[#EDF2E5] text-[#103723] lg:pb-0 ${reserveStickySpace ? "pb-[calc(6rem+env(safe-area-inset-bottom,0px))]" : "pb-[env(safe-area-inset-bottom,0px)]"}`}>
+      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-10 lg:px-12">
+        <div className="grid gap-7 sm:grid-cols-[1fr_auto] sm:gap-12">
+          <div className="max-w-sm">
+            <Link href="/" aria-label="Parenting Guide home" className={`w-fit gap-3 ${linkClass}`}><Image src="/logo.png" alt="" width={44} height={44} className="size-11 object-contain" /><span className="text-lg font-bold tracking-tight text-[#103723]">Parenting Guide</span></Link>
+            <p className="mt-3 text-sm leading-relaxed text-[#596258]">Practical guidance for calmer parenting and stronger family connections.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-4 sm:gap-x-12">
+            <nav aria-label="Explore"><p className="mb-2 text-xs font-bold text-[#103723]">Explore</p><ul><li><Link href="/#program" className={linkClass}>Workshop topics</Link></li><li><Link href="/#gallery" className={linkClass}>Community moments</Link></li><li><a href="https://wa.me/919065117353" target="_blank" rel="noopener noreferrer" className={`${linkClass} gap-1`}>WhatsApp support<ArrowUpRight className="size-3.5 shrink-0" aria-hidden="true" /></a></li></ul></nav>
+            <nav aria-label="Legal"><p className="mb-2 text-xs font-bold text-[#103723]">Information</p><ul><li><Link href="/privacy-policy" className={linkClass}>Privacy Policy</Link></li><li><Link href="/terms-of-service" className={linkClass}>Terms of Service</Link></li></ul></nav>
           </div>
         </div>
+        <div className="mt-7 flex flex-col gap-2 border-t border-[#103723]/12 pt-5 text-xs leading-relaxed text-[#667060] sm:flex-row sm:items-center sm:justify-between"><p>&copy; 2026 Pravesh Parenting. All rights reserved.</p><p>Developed by <span className="font-semibold">Akamify</span></p></div>
       </div>
-
-      {/* Decorative Bottom Line - Very Subtle Green */}
-      <div className="h-1 bg-gradient-to-r from-transparent via-[#3B5E2B]/20 to-transparent opacity-30"></div>
     </footer>
   );
 }

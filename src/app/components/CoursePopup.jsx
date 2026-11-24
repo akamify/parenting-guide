@@ -1,39 +1,36 @@
 "use client"
-import { useState, useEffect } from 'react';
+import Image from "next/image";
+import { useState, useEffect, useRef } from 'react';
 import { X, Play, CheckCircle, Users, Clock, Sparkles, TrendingUp } from 'lucide-react';
 
 function CoursePopup() {
     const [isOpen, setIsOpen] = useState(false);
 
+    const timerRef = useRef(null);
     useEffect(() => {
-        if (!localStorage.getItem('coursePopupSeen')) {
-            setIsOpen(true);
-        }
-
-        return () => {
-            clearTimeout((window).coursePopupTimer);
-        };
+        const initial = setTimeout(() => {
+            try { if (!localStorage.getItem('coursePopupSeen')) setIsOpen(true); } catch { /* Keep it closed if storage is unavailable. */ }
+        }, 0);
+        return () => { clearTimeout(initial); clearTimeout(timerRef.current); };
     }, []);
 
     const closePopup = (remindLater = false) => {
         setIsOpen(false);
         const delay = remindLater ? 5000 : 10000;
-        (window).coursePopupTimer = setTimeout(() => {
-            if (!localStorage.getItem('coursePopupSeen')) {
-                setIsOpen(true);
-            }
+        timerRef.current = setTimeout(() => {
+            try { if (!localStorage.getItem('coursePopupSeen')) setIsOpen(true); } catch { /* Keep closed. */ }
         }, delay);
     };
 
     const enrollNow = () => {
-        window.open('https://www.mahabalipriceaction.info/courses.html', '_blank');
+        window.open('https://www.mahabalipriceaction.info/courses.html', '_blank', 'noopener,noreferrer');
         setIsOpen(false);
-        localStorage.setItem('coursePopupSeen', 'true');
-        clearTimeout((window).coursePopupTimer);
+        try { localStorage.setItem('coursePopupSeen', 'true'); } catch { /* Continue without persistence. */ }
+        clearTimeout(timerRef.current);
     };
 
     const joinWebinar = () => {
-        window.open('https://www.youtube.com/channel/UCEr2JtHOOOxmXCwUtVoz7jw/live', '_blank');
+        window.open('https://www.youtube.com/channel/UCEr2JtHOOOxmXCwUtVoz7jw/live', '_blank', 'noopener,noreferrer');
     };
 
     if (!isOpen) return null;
@@ -137,7 +134,7 @@ function CoursePopup() {
                             {/* Course Image & Details */}
                             <div className="flex items-start gap-3 sm:gap-4 lg:gap-5 flex-1 w-full lg:w-auto">
                                 <div className="relative flex-shrink-0 float-animation">
-                                    <img
+                                    <Image width={800} height={600} unoptimized
                                         src="https://images.pexels.com/photos/6801648/pexels-photo-6801648.jpeg?auto=compress&cs=tinysrgb&w=800"
                                         alt="Mahabali Price Action Course"
                                         className="w-20 h-16 sm:w-28 sm:h-20 lg:w-36 lg:h-28 rounded-2xl object-cover shadow-2xl neon-border transition-all duration-500 hover:scale-110"

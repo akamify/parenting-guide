@@ -10,9 +10,7 @@ function requireEnv(name) {
 export function getQstashTargetUrl(reqUrl, headers) {
   if (process.env.QSTASH_TARGET_URL) return normalizeBaseUrl(process.env.QSTASH_TARGET_URL);
   if (process.env.NEXT_PUBLIC_SITE_URL) return normalizeBaseUrl(process.env.NEXT_PUBLIC_SITE_URL);
-  const host = headers?.get?.("x-forwarded-host") || headers?.get?.("host");
-  const proto = headers?.get?.("x-forwarded-proto");
-  if (host) return `${proto || "https"}://${host}`;
+  if (process.env.NODE_ENV === "production") throw new Error("QSTASH_TARGET_URL or NEXT_PUBLIC_SITE_URL is required");
   if (reqUrl) return new URL(reqUrl).origin;
   return "http://localhost:3000";
 }
@@ -39,11 +37,14 @@ export async function publishScheduled({ url, body, notBeforeEpochSeconds }) {
     headers: {
       Authorization: `Bearer ${process.env.QSTASH_TOKEN}`,
       "Content-Type": "application/json",
+      "Upstash-Deduplication-Id": `${body.leadId}:${body.type}:${notBeforeEpochSeconds}`,
+      "Upstash-Retries": "3",
       ...(notBeforeEpochSeconds > toEpochSeconds(Date.now()) && {
         "Upstash-Not-Before": String(notBeforeEpochSeconds),
       }),
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(8000),
   });
 
   const text = await res.text();
@@ -63,8 +64,14 @@ export async function verifyQstashRequest({ body, signature, reqUrl }) {
     nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY,
   });
 
-  const url = `${getQstashTargetUrl(reqUrl)}/api/qstash`;
-  return receiver.verify({ body, signature, url });
+  const requestedPath = new URL(reqUrl).pathname;
+  const base = getQstashTargetUrl(reqUrl);
+  // Older queued jobs used the non-trailing-slash URL before Next.js redirected it.
+  for (const path of new Set([requestedPath, "/api/qstash", "/api/qstash/"])) {
+    try { if (await receiver.verify({ body, signature, url: `${base}${path}` })) return true; }
+    catch { /* Try the other supported callback URL spelling. */ }
+  }
+  return false;
 }
 
 export function toEpochSeconds(timestamp) {

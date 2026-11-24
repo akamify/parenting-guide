@@ -1,7 +1,9 @@
 "use client";
 
+import { useId, useState } from "react";
+import Link from "next/link";
+import { ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import GalleryCard from "./GalleryCard";
-import WhatsAppContactButton from "../components/WhatsAppContactButton";
 
 const galleryItems = [
   {
@@ -58,63 +60,28 @@ const galleryItems = [
   },
 ];
 
-const GallerySection = () => {
+export default function GallerySection() {
+  const [showAll, setShowAll] = useState(false);
+  const id = useId();
   return (
-    <section id="gallery" className="py-10 sm:py-10 bg-[#FDFBF7] relative overflow-hidden">
-      {/* Decorative background elements */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-brand-green/5 rounded-full blur-[120px] -z-10" />
-
-      <div className="container mx-auto px-5 sm:px-6 lg:px-8">
-        {/* Header Section */}
-        <div className="mx-auto mb-6 max-w-3xl text-center md:mb-10">
-          <span className="mb-4 inline-block rounded-full bg-[#2d1a0a] border border-brand-green/20 px-5 py-2 text-[10px] font-black uppercase tracking-[0.3em] text-brand-green">
-            Event Gallery
-          </span>
-          <h2 className="mb-6 text-4xl sm:text-5xl md:text-6xl font-black text-[#2D1A0A] tracking-tight">
-            Moments of <span className="text-brand-green italic">Transformation</span>
-          </h2>
-          <p className="text-lg text-gray-500 font-medium max-w-2xl mx-auto">
-            Witness our community of mindful parents growing, learning, and building deeper connections with their children.
-          </p>
+    <section id="gallery" aria-labelledby={`${id}-title`} className="bg-[#FDFBF7] text-[#103723]">
+      <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8 sm:py-14 lg:px-12 lg:py-16">
+        <div className="mb-7 max-w-2xl lg:mb-9">
+          <p className="mb-4 inline-flex rounded-full bg-[#E3EDD6] px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.15em] sm:text-xs">Community moments</p>
+          <h2 id={`${id}-title`} className="text-[clamp(1.75rem,7.5vw,2rem)] font-bold leading-[1.12] tracking-[-0.035em] sm:text-4xl lg:text-[2.5rem]">Growing together.<br />One connection at a time.</h2>
+          <p className="mt-4 text-sm leading-relaxed text-[#596258] sm:text-base">A look at the conversations, learning and shared moments in our parenting community.</p>
         </div>
-
-        {/* Responsive Grid */}
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:gap-10">
-          {galleryItems.map((item, index) => (
-            <div
-              key={index}
-              className="min-w-0"
-            >
-              <GalleryCard {...item} />
-            </div>
-          ))}
+        <ul id={`${id}-moments`} className="grid items-stretch gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+          {galleryItems.map((item, index) => <li key={item.image} className={`min-w-0 ${!showAll && index >= 3 ? "hidden" : ""}`}><GalleryCard {...item} /></li>)}
+        </ul>
+        <div className="mt-6 flex justify-center">
+          <button type="button" aria-expanded={showAll} aria-controls={`${id}-moments`} onClick={() => setShowAll(!showAll)} className="inline-flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#CCD5C7] bg-white px-5 py-3 text-sm font-semibold text-[#237344] transition-colors hover:bg-[#EAF0DE] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#237344]">{showAll ? <>Show fewer moments<ChevronUp className="size-4" aria-hidden="true" /></> : <>View all {galleryItems.length} moments<ChevronDown className="size-4" aria-hidden="true" /></>}</button>
         </div>
-
-        {/* Bottom Banner Card */}
-        <div className="mt-20 text-center">
-          <div className="inline-flex flex-col items-center gap-6 rounded-[2.5rem] bg-white p-8 md:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100 backdrop-blur-md sm:flex-row sm:text-left">
-            <div className="flex-1">
-              <p className="text-xl font-black text-[#2D1A0A]">
-                Ready to be part of our next workshop?
-              </p>
-              <p className="text-sm text-gray-400 font-bold uppercase tracking-wider mt-1">
-                Seats fill up fast for our offline sessions
-              </p>
-            </div>
-            <div className="flex items-stretch gap-2">
-              <button
-                onClick={() => (window.location.href = "/form")}
-                className="rounded-2xl bg-[#2d1a0a] text-white px-8 py-4 text-sm font-black uppercase tracking-widest shadow-xl transition-all duration-300 hover:bg-brand-green hover:-translate-y-1 active:scale-95 cursor-pointer"
-              >
-                Enroll Now
-              </button>
-              <WhatsAppContactButton />
-            </div>
-          </div>
+        <div data-registration-cta className="mt-8 flex flex-col gap-5 rounded-3xl bg-[#EAF0DE] p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between lg:gap-8 lg:px-7">
+          <div><p className="text-xl font-bold leading-snug tracking-tight lg:text-2xl">Make space for a calmer home.</p><p className="mt-2 text-sm leading-relaxed text-[#596258]">Join our free live workshop. Every Sunday at 11:00 AM IST.</p></div>
+          <Link href="/form" className="inline-flex min-h-13 shrink-0 items-center justify-center gap-3 rounded-2xl bg-[#237344] px-5 py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#195934] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#237344]">Reserve my free spot<ArrowRight className="size-5 shrink-0" aria-hidden="true" /></Link>
         </div>
       </div>
     </section>
   );
-};
-
-export default GallerySection;
+}

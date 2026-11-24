@@ -1,161 +1,35 @@
-// src/app/api/cron/route.js
+﻿import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { LEAD_STATUS_COLUMNS, markCell, readAllLeads, readLeadStatus } from "../../lib/googleSheet";
-import {
-  isWhatsAppSendingEnabled,
-  send1DayReminder,
-  sendMorningReminder,
-  send10MinReminder,
-  sendLiveNow,
-} from "../../lib/waspakamify";
+import { readAllLeads } from "../../lib/googleSheet";
+import { deliverReminder, reminderTypes } from "../../lib/reminders";
 import { getWebinarReminderTimes } from "../../lib/webinar";
-
-// 0-based indexes for A:O
-const COL_NAME = 1;         // B
-const COL_PHONE = 3;        // D
-const COL_WEBINAR_DAY = 5;  // F
-const COL_WEBINAR_DATE = 6; // G
-const COL_WEBINAR_TIME = 7; // H
-const COL_WEBINAR_ISO = 8;  // I
-
-function isAuthorized(req) {
-  // for GitHub Actions: /api/cron?secret=XXXX
-  const url = new URL(req.url);
-  const secret = url.searchParams.get("secret");
-  return secret && secret === process.env.CRON_SECRET;
-}
+import { isWhatsAppSendingEnabled } from "../../lib/waspakamify";
 
 export async function GET(req) {
+  const secret = process.env.CRON_SECRET;
+  const supplied = req.headers.get("authorization")?.replace(/^Bearer /i, "") || new URL(req.url).searchParams.get("secret") || "";
+  if (!secret || Buffer.byteLength(supplied) !== Buffer.byteLength(secret) || !timingSafeEqual(Buffer.from(supplied), Buffer.from(secret))) return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
+  if (!isWhatsAppSendingEnabled()) return NextResponse.json({ ok: true, skipped: true });
   try {
-    if (process.env.CRON_SECRET && !isAuthorized(req)) {
-      return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
-    }
-
     const leads = await readAllLeads();
-    const now = new Date();
-
-    const MIN = 60 * 1000;
-    const WINDOW_MIN = Number(process.env.CRON_WINDOW_MINUTES || 5);
-    const WINDOW_MS = WINDOW_MIN * MIN;
-    const whatsappEnabled = isWhatsAppSendingEnabled();
-
-    let sentCount = { confirm: 0, oneDay: 0, morning: 0, tenMin: 0, live: 0, skipped: 0 };
-    console.log("CRON START", {
-      now: now.toISOString(),
-      windowMinutes: WINDOW_MIN,
-      totalLeads: leads.length,
-      whatsappEnabled,
-    });
-
-    if (!whatsappEnabled) {
-      return NextResponse.json({
-        ok: true,
-        skipped: true,
-        reason: "WHATSAPP_SENDING_ENABLED=false",
-        sentCount,
-        totalLeads: leads.length,
-      });
-    }
-
+    const counts = { sent: 0, failed: 0, skipped: 0 };
+    const now = Date.now();
     for (let i = 0; i < leads.length; i++) {
       const row = leads[i];
-      const sheetRowNumber = i + 2; // because data starts at row 2
-
-      const name = row[COL_NAME] || "";
-      const phone10 = row[COL_PHONE] || "";
-      const webinarDay = row[COL_WEBINAR_DAY] || "";
-      const webinarDate = row[COL_WEBINAR_DATE] || "";
-      const webinarTime = row[COL_WEBINAR_TIME] || "";
-      const webinarISO = row[COL_WEBINAR_ISO] || "";
-
-      const sentConfirm = readLeadStatus(row, "confirmation");
-      const sent1Day = readLeadStatus(row, "1day");
-      const sent10Min = readLeadStatus(row, "10min");
-      const sentLive = readLeadStatus(row, "live");
-      const sentMorning = readLeadStatus(row, "morning");
-
-      // basic validations
-      if (!phone10 || phone10.length !== 10) {
-        console.log("SKIP invalid phone", { sheetRowNumber, phone10 });
-        sentCount.skipped++;
-        continue;
+      const webinar = new Date(row[8]);
+      if (!Number.isFinite(webinar.getTime())) continue;
+      const times = getWebinarReminderTimes(webinar);
+      for (const type of reminderTypes) {
+        if (now < times[type] || now - times[type] > 30 * 60_000) continue;
+        try {
+          const result = await deliverReminder(i + 2, type, row[14]);
+          counts[result.skipped ? "skipped" : "sent"]++;
+        } catch { counts.failed++; }
       }
-      if (!webinarISO) {
-        console.log("SKIP missing webinarISO", { sheetRowNumber });
-        sentCount.skipped++;
-        continue;
-      }
-
-      const webinarDT = new Date(webinarISO);
-      if (!Number.isFinite(webinarDT.getTime())) {
-        console.log("SKIP invalid webinarISO", { sheetRowNumber });
-        sentCount.skipped++;
-        continue;
-      }
-
-      const diffMs = webinarDT.getTime() - now.getTime();
-      const diffMin = Math.round(diffMs / MIN);
-      const reminderTimes = getWebinarReminderTimes(webinarDT);
-      const isDue = (type, status) => {
-        const elapsed = now.getTime() - reminderTimes[type];
-        return status !== "yes" && status !== "skipped" && elapsed >= 0 && elapsed < WINDOW_MS;
-      };
-
-      // If confirmation already sent via API, but sheet still says "no"
-      if (sentConfirm === "no") {
-        await markCell(sheetRowNumber, LEAD_STATUS_COLUMNS.confirmation, "yes");
-        sentCount.confirm++;
-      }
-
-      if (isDue("1day", sent1Day)) {
-        await send1DayReminder({ name, phone10, webinarDate, webinarDay, webinarTime });
-        await markCell(sheetRowNumber, LEAD_STATUS_COLUMNS["1day"], "yes");
-        sentCount.oneDay++;
-        console.log("SEND 1DAY", { sheetRowNumber, diffMin, webinarISO });
-        continue;
-      }
-
-      // Webinar-day 09:00 AM IST window
-      if (isDue("morning", sentMorning)) {
-        await sendMorningReminder({ name, phone10, webinarDate, webinarDay, webinarTime });
-        await markCell(sheetRowNumber, LEAD_STATUS_COLUMNS.morning, "yes");
-        sentCount.morning++;
-        console.log("SEND MORNING", { sheetRowNumber, webinarISO });
-        continue;
-      }
-
-      // 10-min window
-      if (isDue("10min", sent10Min)) {
-        await send10MinReminder({ name, phone10, webinarDate, webinarDay, webinarTime });
-        await markCell(sheetRowNumber, LEAD_STATUS_COLUMNS["10min"], "yes");
-        sentCount.tenMin++;
-        console.log("SEND 10MIN", { sheetRowNumber, diffMin, webinarISO });
-        continue;
-      }
-
-      // Live window
-      if (isDue("live", sentLive)) {
-        await sendLiveNow({ name, phone10, webinarDate, webinarDay, webinarTime });
-        await markCell(sheetRowNumber, LEAD_STATUS_COLUMNS.live, "yes");
-        sentCount.live++;
-        console.log("SEND LIVE", { sheetRowNumber, diffMin, webinarISO });
-        continue;
-      }
-
-      console.log("SKIP window", {
-        sheetRowNumber,
-        diffMin,
-        webinarISO,
-        sent1Day,
-        sentMorning,
-        sent10Min,
-        sentLive,
-      });
     }
-
-    return NextResponse.json({ ok: true, sentCount, totalLeads: leads.length });
-  } catch (error) {
-    console.error("CRON Error:", error);
-    return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true, counts });
+  } catch {
+    console.error("Cron could not read registrations");
+    return NextResponse.json({ ok: false, message: "Reminder service unavailable" }, { status: 503 });
   }
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import Image from "next/image";
 import React from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination, Navigation } from 'swiper/modules';
@@ -149,7 +150,7 @@ export default function TestimonialsSection() {
                       </div>
                     </div>
                     <div className="mb-4">
-                      <p className="text-gray-300 italic text-base md:text-lg leading-relaxed">"{testimonial.quote}"</p>
+                      <p className="text-gray-300 italic text-base md:text-lg leading-relaxed">&quot;{testimonial.quote}&quot;</p>
                     </div>
                     <div className="pt-4 border-t border-[#3B5E2B]/10">
                       <h4 className="font-bold text-white text-sm md:text-base">{testimonial.name}</h4>
@@ -168,13 +169,13 @@ export default function TestimonialsSection() {
                           />
                         ))}
                       </div>
-                      <p className="text-gray-300 italic text-base md:text-lg leading-relaxed mb-3 md:mb-4">"{testimonial.quote}"</p>
+                      <p className="text-gray-300 italic text-base md:text-lg leading-relaxed mb-3 md:mb-4">&quot;{testimonial.quote}&quot;</p>
                     </div>
 
                     {/* User Info */}
                     <div className="flex items-center gap-3 md:gap-4 pt-3 md:pt-4 border-t border-[#3B5E2B]/10">
                       <div className="relative flex-shrink-0">
-                        <img
+                        <Image width={800} height={600} unoptimized
                           src={testimonial.image}
                           alt={testimonial.name}
                           className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover border-2 border-[#3B5E2B]/20 group-hover:border-[#3B5E2B]/50 transition-colors"

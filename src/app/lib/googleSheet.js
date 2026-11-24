@@ -1,3 +1,4 @@
+import { normalizePrivateKey } from "./keys";
 // src/app/lib/googleSheet.js
 import { google } from "googleapis";
 import { cleanPhone10 } from "./phone";
@@ -15,6 +16,14 @@ export function readLeadStatus(row, type) {
   return String(row[index] || "no").trim().toLowerCase();
 }
 
+export async function readLead(rowNumber) {
+  if (!Number.isSafeInteger(rowNumber) || rowNumber < 2) return null;
+  const sheets = await getSheets();
+  const { spreadsheetId } = getGoogleSheetConfig();
+  const res = await runSheetRequest(() => sheets.spreadsheets.values.get({ spreadsheetId, range: `Sheet1!A${rowNumber}:Q${rowNumber}` }));
+  return res.data.values?.[0] || null;
+}
+
 function maskSheetId(value) {
   const str = String(value || "");
   if (str.length <= 12) return str ? "***" : "";
@@ -24,7 +33,7 @@ function maskSheetId(value) {
 function getGoogleSheetConfig() {
   const spreadsheetId = process.env.GOOGLE_SHEET_ID;
   const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  const privateKey = normalizePrivateKey(process.env.GOOGLE_PRIVATE_KEY);
 
   if (!spreadsheetId) throw new Error("GOOGLE_SHEET_ID is required");
   if (!clientEmail) throw new Error("GOOGLE_CLIENT_EMAIL is required");
@@ -89,13 +98,15 @@ export async function saveToSheet({
   webinarISO,
   leadId,
   skippedReminders = [],
+  whatsappConsent = false,
+  consentAt = "",
 }) {
   const sheets = await getSheets();
   const { spreadsheetId } = getGoogleSheetConfig();
   const reminderStatus = (type) => skippedReminders.includes(type) ? "skipped" : "no";
 
   const values = [[
-    new Date().toLocaleString("en-IN"), // A Timestamp
+    new Date().toISOString(),           // A Timestamp (UTC)
     name,                               // B
     email,                              // C
     phone,                              // D (10 digit only)
@@ -110,12 +121,14 @@ export async function saveToSheet({
     reminderStatus("10min"),            // M sent10Min
     reminderStatus("live"),             // N sentLive
     leadId || "",                       // O leadId
+    whatsappConsent ? "yes" : "no",     // P WhatsApp reminder consent
+    consentAt,                          // Q Consent timestamp (UTC)
   ]];
 
   const res = await runSheetRequest(() =>
     sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: "Sheet1!A:O",
+      range: "Sheet1!A:Q",
       valueInputOption: "RAW",
       requestBody: { values },
     })
@@ -194,7 +207,6 @@ export async function findActiveLeadByContact({ email, phone10, now = new Date()
     const rowEmail = String(row[2] || "").trim().toLowerCase();
     const rowPhoneRaw = String(row[3] || "").trim();
     const rowWebinarISO = String(row[8] || "").trim();
-    const rowSentLive = readLeadStatus(row, "live");
 
     let rowPhone = "";
     try {
@@ -208,7 +220,7 @@ export async function findActiveLeadByContact({ email, phone10, now = new Date()
     if (!matchedByEmail && !matchedByPhone) continue;
 
     const webinarTime = rowWebinarISO ? new Date(rowWebinarISO).getTime() : NaN;
-    const isCompleted = rowSentLive === "yes" || (Number.isFinite(webinarTime) && webinarTime <= nowTime);
+    const isCompleted = Number.isFinite(webinarTime) && webinarTime <= nowTime;
     if (isCompleted) continue;
 
     return {

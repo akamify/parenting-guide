@@ -1,131 +1,35 @@
-// File: app/layout.jsx
-import Footer from "./components/Footer";
+﻿import Script from "next/script";
 import ConditionalFooter from "./components/ConditionalFooter";
+import { siteUrl } from "./lib/site";
 import "./globals.css";
 
+const description = "Join Parenting Guide's free live Sunday workshop at 11 AM IST. Explore practical ways to understand your child, build connection and create healthier routines.";
+const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "26021697834109599";
+export const viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#237344" };
 export const metadata = {
-
-  title: "Mindful Parenting Guide | Expert Parenting Workshop & Training",
-
-  description:
-    "Master the art of mindful parenting with our expert-led workshop. Learn child psychology, positive parenting strategies, and nurture your child's development with proven techniques from certified advisors.",
-
-  keywords: [
-    "parenting guide",
-    "mindful parenting",
-    "positive parenting",
-    "child psychology",
-    "parenting workshop",
-    "parenting education",
-    "child development",
-    "parenting tips",
-    "parenting advice",
-    "expert parenting mentor",
-  ],
-
-  authors: [{ name: "Parenting Guide Academy" }],
-  openGraph: {
-    title: "Mindful Parenting Guide | Expert Parenting Workshop & Training",
-    description:
-      "Master the art of mindful parenting with certified expert advisors. Learn proven child psychology and positive parenting strategies to nurture your child's future.",
-    url: "https://parentingguide.in",
-    siteName: "Parenting Guide Academy",
-    images: [
-      {
-        url: "/logo.png",
-        width: 800,
-        height: 600,
-        alt: "Parenting Guide Academy Logo",
-      },
-    ],
-    locale: "en_US",
-    type: "website",
-  },
-  icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/favicon.ico",
-  },
+  metadataBase: new URL(siteUrl),
+  title: { default: "Free Mindful Parenting Workshop | Parenting Guide", template: "%s | Parenting Guide" },
+  description,
+  applicationName: "Parenting Guide",
+  authors: [{ name: "Parenting Guide" }],
+  openGraph: { title: "Free Mindful Parenting Workshop", description, siteName: "Parenting Guide", locale: "en_IN", type: "website", images: [{ url: "/logo.png", width: 832, height: 832, alt: "Parenting Guide" }] },
+  twitter: { card: "summary", title: "Free Mindful Parenting Workshop", description, images: ["/logo.png"] },
+  icons: { icon: "/favicon.svg", apple: "/logo.png" },
+  robots: { index: true, follow: true },
+  verification: process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : undefined,
 };
 
 export default function RootLayout({ children }) {
+  const schema = { "@context": "https://schema.org", "@type": "Organization", name: "Parenting Guide", url: siteUrl, logo: `${siteUrl}/logo.png` };
   return (
-    <html lang="en">
-      <head>
-        <link rel="icon" href="/logo.png" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta
-          name="google-site-verification"
-          content="<!-- add your Google Search Console verification code here -->"
-        />
-
-        {/* Meta Pixel Code - injected into the head so it runs as soon as possible on the client */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `!function(f,b,e,v,n,t,s)
-{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];
-s.parentNode.insertBefore(t,s)}(window, document,'script',
-'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '26021697834109599');
-fbq('track', 'PageView');`,
-          }}
-        />
-      </head>
+    <html lang="en-IN">
       <body>
-        {/* Noscript fallback for users with JS disabled */}
-        <noscript
-          dangerouslySetInnerHTML={{
-            __html:
-              `<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=26021697834109599&ev=PageView&noscript=1" />`,
-          }}
-        />
-
-        {/* Optional: For the Next.js app router (single-page navigation) you should call fbq on route changes.
-            Add the small client component below (components/FbPixelClient.jsx) and include <FbPixelClient /> here
-            so PageView is tracked on route changes as well. */}
-
+        <a href="#main-content" className="sr-only fixed left-4 top-4 z-[100] rounded-xl bg-[#237344] px-4 py-3 text-white focus:not-sr-only">Skip to content</a>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, "\\u003c") }} />
         {children}
         <ConditionalFooter />
+        {/^\d+$/.test(pixelId || "") && <Script id="meta-pixel" strategy="afterInteractive">{`!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${pixelId}');fbq('track','PageView');`}</Script>}
       </body>
     </html>
   );
 }
-
-
-// ==========================
-// File: components/FbPixelClient.jsx
-// (Create this file and import it into the layout if you want SPA route-change tracking.)
-// ==========================
-
-// "use client";
-// import { useEffect } from "react";
-// import { usePathname } from "next/navigation";
-//
-// export default function FbPixelClient() {
-//   const pathname = usePathname();
-//
-//   useEffect(() => {
-//     // fbq is injected by the head script above. Only run on client.
-//     if (typeof window !== "undefined" && window.fbq) {
-//       window.fbq("track", "PageView");
-//     }
-//   }, [pathname]);
-//
-//   return null;
-// }
-
-
-// --------------------------
-// Notes & usage
-// --------------------------
-// 1) Replace the Pixel ID '26021697834109599' with your real Pixel ID if different.
-// 2) Place app/layout.jsx in your app/ directory (Next.js 13+ app router). Create components/FbPixelClient.jsx
-//    with the code above and then import it into the layout (e.g. `import FbPixelClient from "./components/FbPixelClient";`)
-//    and add <FbPixelClient /> just above {children} to track client-side navigation (recommended).
-// 3) To track custom events (Lead, Purchase, etc.) call `window.fbq('track', 'Lead')` from client-side code (e.g. onClick handlers).
-// 4) Verify with the Facebook Pixel Helper Chrome extension or in Events Manager.
-// 5) If you prefer using next/script or want me to add the client component into the repo for you, tell me and I will update.

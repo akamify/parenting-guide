@@ -10,6 +10,7 @@ export default function SuccessVideo() {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   async function togglePlayback() {
     const video = videoRef.current;
@@ -33,6 +34,7 @@ export default function SuccessVideo() {
 
   return (
     <div className="relative mb-8 overflow-hidden rounded-2xl bg-black">
+      {hasError ? <p role="status" className="bg-[#F1F5EB] p-5 text-sm text-[#596258]">The welcome video couldn’t load. Your registration details are available below.</p> : <>
       <video
         ref={videoRef}
         src="/success-page.mp4"
@@ -43,6 +45,8 @@ export default function SuccessVideo() {
         autoPlay
         muted={isMuted}
         playsInline
+        preload="metadata"
+        onError={() => setHasError(true)}
         disablePictureInPicture
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
@@ -67,6 +71,7 @@ export default function SuccessVideo() {
           {isMuted ? <VolumeX size={19} aria-hidden="true" /> : <Volume2 size={19} aria-hidden="true" />}
         </button>
       </div>
+      </>}
     </div>
   );
 }

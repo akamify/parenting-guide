@@ -21,5 +21,5 @@ export default function ConditionalFooter() {
     return null;
   }
 
-  return <Footer />;
+  return <Footer reserveStickySpace={normalizedPath === ""} />;
 }

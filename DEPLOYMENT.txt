@@ -1,0 +1,94 @@
+Parenting Guide - deployment and review notes
+
+Validation commands
+  npm ci
+  npm run lint
+  npm test
+  npm run build
+  npm run check:production
+  npm run check:production -- --serverless
+
+Configuration
+Copy .env.example to .env.local for development. Put real values in the hosting
+provider's environment settings for production; never commit credentials.
+Set NEXT_PUBLIC_SITE_URL and QSTASH_TARGET_URL to the same public HTTPS origin.
+The default SEO origin is https://parentingguide.in; change it if this is not
+the real production domain. Verify the domain in Search Console and submit
+/sitemap.xml. Set GOOGLE_SITE_VERIFICATION only to a real verification token.
+The existing Meta pixel is retained by default. Set NEXT_PUBLIC_META_PIXEL_ID
+to your approved numeric ID, or explicitly set it empty to disable tracking.
+
+Share the Google spreadsheet with GOOGLE_CLIENT_EMAIL as Editor. The lead sheet
+is Sheet1 with these columns:
+A timestamp, B name, C email, D phone, E source, F webinar day, G webinar date,
+H webinar time, I webinar ISO, J confirmation, K Saturday reminder, L morning,
+M ten-minute reminder, N live reminder, O lead ID, P consent, Q consent timestamp.
+Use npm run init:sheet only for a new sheet or after reviewing its existing
+headers. It writes headers only; the audit did not access or change a live sheet.
+
+Shared state and traffic protection
+Use UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN for multiple instances,
+including Vercel. Set REQUIRE_SHARED_STATE=true there. Local single-process
+memory is only a development/single-instance fallback; it does not coordinate
+across instances. The production check requires Redis for --serverless.
+Registration is rate limited to five attempts per IP per 15 minutes. Configure
+trusted proxy headers and a hosting WAF/turnstile if exposing high-volume forms.
+
+Messaging
+Enable WHATSAPP_SENDING_ENABLED only after all campaign names, approved template
+variables, webinar/community links, QStash signing keys and account credit are
+verified. Confirmation currently has a video header and eight body variables;
+check against your actual approved provider template. Keep the production site
+publicly accessible to QStash, including /api/qstash/ with a trailing slash.
+QStash is the primary scheduler: Saturday 20:00, Sunday 09:00, 10:50 and 11:00 IST.
+Past reminders are skipped. A registration after Sunday 11:00 goes to next Sunday.
+
+Configure an external scheduler to GET /api/cron/ every minute with
+Authorization: Bearer <CRON_SECRET>. Use a strong random secret (32+ characters).
+The audit created no external scheduler and sent no live messages. The cron
+fallback reads saved leads when individual QStash publish calls fail. Individual
+recipient failures do not abort the entire batch.
+
+The sheet value 'yes' means the provider accepted the send request, not that the
+recipient received it. Final delivery, including Meta error 131049, must be
+checked in the messaging provider's delivery reports. Provider-specific delivery
+webhooks require that provider's event schema and authentication details.
+Locks and status checks suppress overlapping cron/callback requests and normal
+retries. Absolute exactly-once delivery cannot be guaranteed if the provider
+accepts a request but its response/status write is lost; reconcile provider logs
+before replaying an uncertain send.
+
+Course checkout
+/courses/, /courses/form/ and /courses/thank-you/ are disabled (404).
+Legacy Razorpay endpoints return 410 and cannot create orders or fabricate
+payment records. Re-enable checkout only with an authenticated provider payment
+verification, captured amount/currency/order checks and durable payment-ID
+idempotency. Do not restore the old public payment-status writer.
+
+Content and final live checks
+Verify all testimonial video IDs and the authenticity/permission of quotes,
+gallery photos, dates, participant counts and badges before publication.
+The existing media/content was not independently authenticated. Supply approved
+captions/transcripts for spoken videos. Review the actual privacy/terms copy
+against your business practices; this audit did not provide a legal review.
+
+Run a test registration in a staging deployment, check the saved row, confirmation
+and all scheduled reminder entries, then check final delivery in the provider.
+Test on a physical iPhone and Android for keyboard/autofill behavior. The local
+browser checks emulate viewports; they do not replace physical-device testing.
+No real provider messages, payment transactions, deployment or DNS changes were
+performed during this review.
+Local audit results (24 November 2026)
+- Full-project lint: passed without warnings.
+- Automated tests: 20 passed (validation, scheduler, API guards, locking,
+  consent, private-key parsing, callback redirect compatibility and recovery).
+- npm audit: zero known vulnerabilities after compatible upgrades.
+- Production build: passed on Next.js 16.4.6.
+- HTTP checks: canonical URLs, sitemap/robots, noindex, security headers,
+  disabled checkout, API authentication, payload limits and rate limiting passed.
+- Browser: five public pages at six viewport widths (320-1440px) checked for
+  overflow, labels, H1/main landmarks, layout shift and runtime errors.
+- Simulated registration and confirmation refresh after 11 seconds passed.
+- Optimized 96px logo response measured 3,142 bytes (original PNG 888,401 bytes).
+- Production environment check intentionally remains failing until actual
+  hosting values are supplied. This is a launch prerequisite, not a test bypass.

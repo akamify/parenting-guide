@@ -1,361 +1,253 @@
-import React, { useState, useEffect, useRef } from "react";
-import {
-  Users,
-  Award,
-  Star,
-  User,
-  Mail,
-  Phone,
-  ChevronRight,
-  Clock,
-  Loader2,
-  Heart,
-} from "lucide-react";
+﻿"use client";
+
+import { useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { cleanPhone10 } from "../lib/phone";
+import { AlertCircle, ArrowLeft, ArrowRight, CalendarDays, CalendarCheck2, CheckCircle2, Clock3, HeartHandshake, Loader2, Users } from "lucide-react";
 import { formatWebinarParts, getNextWebinarDate } from "../lib/webinar";
+import { getRegistrationErrors, validateForm } from "../lib/validate";
 import WhatsAppContactButton from "./WhatsAppContactButton";
 
-// --- PARENTING TEXT DATA ---
-const calculateWebinarData = () => {
-  const webinarType = "Mindful Parenting Workshop"; // Text changed
-  const webinarDateObj = getNextWebinarDate();
-  const { webinarDay, webinarDate, webinarTime } = formatWebinarParts(webinarDateObj);
+const fieldOrder = ["name", "email", "phone", "whatsappConsent"];
+const buttonClass = "inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl bg-[#237344] px-4 py-4 text-base font-bold text-white transition-colors hover:bg-[#195934] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#237344] disabled:cursor-wait disabled:bg-[#7C9D83]";
 
-  return { webinarDay, webinarDate, webinarTime, webinarType };
-};
-
-const calculateBookedSeats = () => {
-  const now = new Date();
-  const seatCount = 92 + now.getDate() + Math.floor(now.getHours() / 2);
-  return Math.max(100, seatCount);
-};
+function WorkshopSchedule() {
+  return (
+    <div className="flex items-center rounded-2xl bg-[#EAF0DE] px-3 py-4 text-xs font-semibold sm:px-5 sm:text-sm" aria-label="Workshop: every Sunday, 11 AM IST">
+      <span className="flex flex-1 items-center justify-center gap-2 border-r border-[#527840]/25 pr-3"><CalendarDays className="size-5 shrink-0" aria-hidden="true" />Every Sunday</span>
+      <span className="flex flex-1 items-center justify-center gap-2 pl-3"><Clock3 className="size-5 shrink-0" aria-hidden="true" />11:00 AM IST</span>
+    </div>
+  );
+}
 
 export default function LearningForm({ showStickyBar = true }) {
   const router = useRouter();
+  const id = useId();
   const formRef = useRef(null);
-  const [bookedSeats, setBookedSeats] = useState(100);
-
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    webinarDay: "",
-    webinarDate: "",
-    webinarTime: "",
-    webinarType: "Mindful Parenting Workshop",
-  });
-
+  const submittingRef = useRef(false);
+  const requestRef = useRef(null);
+  const [formData, setFormData] = useState({ name: "", email: "", phone: "", whatsappConsent: false });
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [remainingTime, setRemainingTime] = useState(30 * 60);
+  const [successData, setSuccessData] = useState(null);
+  const [stickyVisible, setStickyVisible] = useState(false);
+  const SuccessHeading = showStickyBar ? "h2" : "h1";
+
+  useEffect(() => () => requestRef.current?.abort(), []);
 
   useEffect(() => {
-    let deadline = Date.now() + 30 * 60 * 1000;
-    try {
-      const savedDeadline = Number(localStorage.getItem("parentingFormDeadline"));
-      if (Number.isFinite(savedDeadline) && savedDeadline > Date.now()) {
-        deadline = savedDeadline;
-      } else {
-        localStorage.setItem("parentingFormDeadline", String(deadline));
+    if (!showStickyBar) return;
+    const hero = document.getElementById("hero");
+    const stories = document.getElementById("parent-stories");
+    const form = formRef.current;
+    const inlineCtas = [...document.querySelectorAll("[data-registration-cta]")];
+    const visibleCtas = new Set();
+    if (!hero || !form) return;
+    let heroVisible = true;
+    let formVisible = false;
+    let storiesVisible = false;
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === hero) heroVisible = entry.isIntersecting;
+        if (entry.target === form) formVisible = entry.isIntersecting;
+        if (entry.target === stories) storiesVisible = entry.isIntersecting;
+        if (inlineCtas.includes(entry.target)) {
+          if (entry.isIntersecting) visibleCtas.add(entry.target);
+          else visibleCtas.delete(entry.target);
+        }
       }
-    } catch {
-      // The form remains usable when browser storage is unavailable.
+      setStickyVisible(!heroVisible && !formVisible && !storiesVisible && visibleCtas.size === 0);
+    });
+    observer.observe(hero);
+    observer.observe(form);
+    if (stories) observer.observe(stories);
+    inlineCtas.forEach((cta) => observer.observe(cta));
+    return () => observer.disconnect();
+  }, [showStickyBar]);
+
+  const focusFirstError = (fieldErrors) => {
+    const first = fieldOrder.find((field) => fieldErrors[field]);
+    if (first) formRef.current?.elements.namedItem(first)?.focus();
+  };
+
+  const handleChange = (event) => {
+    const { name, type, checked, value } = event.target;
+    const next = { ...formData, [name]: type === "checkbox" ? checked : value };
+    setFormData(next);
+    if (touched[name]) {
+      const nextErrors = getRegistrationErrors(next);
+      setErrors((prev) => ({ ...prev, [name]: nextErrors[name] }));
     }
-    const initialize = setTimeout(() => {
-      setBookedSeats(calculateBookedSeats());
-      setFormData((prev) => ({ ...prev, ...calculateWebinarData() }));
-    }, 0);
-    const timer = setInterval(() => {
-      setRemainingTime(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
-    }, 1000);
-    return () => {
-      clearTimeout(initialize);
-      clearInterval(timer);
-    };
-  }, []);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errorMessage) setErrorMessage("");
+    setErrorMessage("");
   };
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}m ${secs.toString().padStart(2, "0")}s`;
+  const handleBlur = (event) => {
+    const { name } = event.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    setErrors((prev) => ({ ...prev, [name]: getRegistrationErrors(formData)[name] }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (isSubmitting) return;
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (submittingRef.current || successData) return;
+    const fieldErrors = getRegistrationErrors(formData);
+    setTouched(Object.fromEntries(fieldOrder.map((field) => [field, true])));
+    setErrors(fieldErrors);
+    setErrorMessage("");
+    if (Object.keys(fieldErrors).length) {
+      focusFirstError(fieldErrors);
+      return;
+    }
+    submittingRef.current = true;
     setIsSubmitting(true);
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 30_000);
     try {
-      const formattedPhone = cleanPhone10(formData.phone);
-
+      const normalized = validateForm(formData, { requireConsent: true });
       const response = await fetch("/api/whatsapp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, phone: formattedPhone }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(normalized), signal: controller.signal,
       });
-
-      const result = await response.json();
-      if (result.success) {
-        const webinarMeta = result.webinar || {
-          webinarDay: formData.webinarDay,
-          webinarDate: formData.webinarDate,
-          webinarTime: formData.webinarTime,
-        };
-        localStorage.setItem(
-          "thankyouData",
-          JSON.stringify({ ...formData, ...webinarMeta, phone: formattedPhone }),
-        );
-        router.push("/thank-you");
-      } else {
-        throw new Error(result.message || "Failed");
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.success) {
+        if (result?.fieldErrors) {
+          setErrors(result.fieldErrors);
+          focusFirstError(result.fieldErrors);
+        }
+        setErrorMessage(result?.message || "We couldn’t complete your registration. Your details are still here. Please try again.");
+        return;
       }
-    } catch (err) {
-      setErrorMessage(err.message);
+      const webinar = result.webinar || formatWebinarParts(getNextWebinarDate());
+      const saved = { ...normalized, ...webinar, timestamp: new Date().toISOString() };
+      setSuccessData(saved);
+      // A storage restriction must not turn a successful registration into an error.
+      // Show the inline confirmation if the thank-you page cannot read browser storage.
+      try {
+        sessionStorage.setItem("thankyouData", JSON.stringify(saved));
+        router.push("/thank-you");
+      } catch {
+        // The inline confirmation below remains visible.
+      }
+    } catch (error) {
+      setErrorMessage(error.name === "AbortError"
+        ? "This is taking longer than expected. Your details are still here. Please try again or contact us on WhatsApp."
+        : "Couldn’t connect. Your details are still here. Check your connection and try again.");
     } finally {
+      clearTimeout(timeout);
+      requestRef.current = null;
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
 
+  const inputClass = (field) => `min-h-13 w-full min-w-0 rounded-xl border bg-white px-4 py-3 text-base text-[#103723] outline-none placeholder:text-[#7A827A] focus:ring-3 disabled:bg-[#F2F4EF] ${errors[field] ? "border-[#B42318] focus:border-[#B42318] focus:ring-[#B42318]/10" : "border-[#BCC5BC] focus:border-[#237344] focus:ring-[#237344]/10"}`;
+  const errorRow = (field) => (
+    <p id={`${id}-${field}-help`} aria-live="polite" className={`mt-1.5 min-h-5 text-xs leading-5 ${errors[field] ? "text-[#B42318]" : "text-[#667060]"}`}>
+      {errors[field] || (field === "phone" ? "Use the number you check on WhatsApp." : "\u00a0")}
+    </p>
+  );
+
   return (
-    <div className="relative min-h-svh bg-[#FDFBF7] flex items-center justify-center py-12 px-4 overflow-hidden">
-      {/* --- Earthy Background Design --- */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#3B5E2B_0.5px,transparent_0.5px)] [background-size:32px_32px] opacity-[0.1]" />
-        <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#3B5E2B]/10 rounded-full blur-[100px]" />
-        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-[#4A2B12]/5 rounded-full blur-[100px]" />
-      </div>
-
-      <div className="relative z-10 w-full max-w-6xl bg-white rounded-[3rem] shadow-[0_25px_70px_rgba(74,43,18,0.08)] border border-white overflow-hidden">
-        <div className="grid lg:grid-cols-2">
-          {/* LEFT PANEL: Form Section */}
-          <div className="p-6 sm:p-12 lg:p-16" ref={formRef}>
-            <div className="max-w-md mx-auto">
-              <div className="mb-2 lg:text-left">
-                <h2 className="text-3xl sm:text-4xl font-black text-[#4A2B12] leading-tight">
-                  Master The Art of{" "}
-                  <span className="text-[#3B5E2B] italic font-serif">
-                    Mindful
-                  </span>{" "}
-                  Parenting
-                </h2>
-                <p className="mt-4 text-stone-500 font-medium leading-relaxed">
-                  Apne bache ke bhavishya ko ek nayi disha dein. Workshop join
-                  karne ke liye form bharein.
-                </p>
-
-                {errorMessage && (
-                  <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-xl border border-red-100 text-sm font-bold animate-pulse">
-                    {errorMessage}
-                  </div>
-                )}
-              </div>
-              <span className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-[#3B5E2B]/10 text-[#3B5E2B] text-[10px] font-black uppercase tracking-[0.2em] mb-4">
-                <span className="text-[#4A2B12]">
-                  {bookedSeats} Seats Booked
-                </span>
-                {/* <span></span> */}
-              </span>
-
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 ml-1">
-                    Parent&apos;s Full Name
-                  </label>
-                  <div className="relative group">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-300 group-focus-within:text-[#3B5E2B] transition-colors" />
-                    <input
-                      type="text"
-                      name="name"
-                      required
-                      value={formData.name}
-                      onChange={handleChange}
-                      placeholder="e.g. Rahul Singh"
-                      className="w-full pl-12 pr-5 py-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-4 focus:ring-[#3B5E2B]/5 focus:border-[#3B5E2B] transition-all text-[#4A2B12] font-bold"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 ml-1">
-                    Email Address
-                  </label>
-                  <div className="relative group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-300 group-focus-within:text-[#3B5E2B] transition-colors" />
-                    <input
-                      type="email"
-                      name="email"
-                      required
-                      value={formData.email}
-                      onChange={handleChange}
-                      placeholder="rahul@example.com"
-                      className="w-full pl-12 pr-5 py-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-4 focus:ring-[#3B5E2B]/5 focus:border-[#3B5E2B] transition-all text-[#4A2B12] font-bold"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 ml-1">
-                    WhatsApp Number
-                  </label>
-                  <div className="flex gap-3">
-                    <div className="flex shrink-0 items-center justify-center w-12 sm:w-16 bg-stone-100 border border-stone-100 rounded-2xl text-[#4A2B12] font-black text-xs">
-                      +91
-                    </div>
-                    <div className="relative min-w-0 flex-1 group">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-300 group-focus-within:text-[#3B5E2B] transition-colors" />
-                      <input
-                        type="tel"
-                        name="phone"
-                        required
-                        value={formData.phone}
-                        onChange={handleChange}
-                        placeholder="98765 43510"
-                        className="w-full pl-12 pr-5 py-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-4 focus:ring-[#3B5E2B]/5 focus:border-[#3B5E2B] transition-all text-[#4A2B12] font-bold"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex items-stretch gap-2">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className={`group min-w-0 flex-1 border border-transparent font-black text-xs sm:text-sm uppercase tracking-wide px-2 py-5 rounded-2xl transition-colors duration-300 shadow-xl flex items-center justify-center gap-2 ${
-                      isSubmitting
-                        ? "bg-stone-200 text-stone-400"
-                        : "bg-[#4A2B12] hover:border hover:border-[#4A2B12] hover:text-[#4A2B12] cursor-pointer hover:bg-white text-white"
-                    }`}
-                  >
-                    {isSubmitting ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <>
-                        Register Now — Free{" "}
-                        <ChevronRight className="w-5 h-5 shrink-0 group-hover:translate-x-1 transition-transform" />
-                      </>
-                    )}
-                  </button>
-                  <WhatsAppContactButton />
-                </div>
-              </form>
+    <section aria-labelledby={`${id}-title`} className="min-h-svh bg-[#FDFBF7] text-[#103723]">
+      {!showStickyBar && (
+        <header className="border-b border-[#103723]/8 bg-white">
+          <div className="mx-auto flex min-h-18 max-w-6xl items-center justify-between gap-3 px-5 py-3 sm:px-8">
+            <div className="flex min-w-0 items-center gap-2">
+              <Link href="/" aria-label="Back to workshop" className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl hover:bg-[#EDF3E5] focus-visible:outline-2 focus-visible:outline-[#237344] lg:hidden"><ArrowLeft className="size-5" aria-hidden="true" /></Link>
+              <Link href="/" className="flex min-w-0 items-center gap-2 rounded-lg focus-visible:outline-2 focus-visible:outline-[#237344]">
+                <Image src="/logo.png" alt="" width={44} height={44} className="size-10 shrink-0 object-contain" />
+                <span className="text-sm font-bold tracking-tight sm:text-xl">Parenting Guide</span>
+              </Link>
             </div>
+            <div className="shrink-0"><WhatsAppContactButton variant="outline" /></div>
           </div>
-
-          {/* RIGHT PANEL: Mentor Visuals */}
-          <div className="relative hidden lg:flex flex-col items-center justify-center p-12 bg-gradient-to-br from-[#FDFBF7] to-white border-r border-stone-100">
-            {/* Badges */}
-            <div className="absolute top-15 right-10 animate-float z-99">
-              <div className="bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-md border border-stone-100 flex items-center gap-3">
-                <div className="bg-[#D99B38] p-2 rounded-xl">
-                  <Star className="w-5 h-5 text-white fill-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-black text-[#4A2B12] leading-none">
-                    4.9/5
-                  </p>
-                  <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">
-                    Expert Mentor
-                  </p>
-                </div>
+        </header>
+      )}
+      <div className="mx-auto max-w-6xl px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-7 sm:px-8 sm:py-10 lg:py-10">
+        {!showStickyBar && <Link href="/" className="mb-8 hidden min-h-11 w-fit items-center gap-2 rounded-lg text-sm font-semibold text-[#237344] hover:underline focus-visible:outline-2 focus-visible:outline-[#237344] lg:inline-flex"><ArrowLeft className="size-4" aria-hidden="true" />Back to workshop</Link>}
+        <div className="mx-auto grid max-w-lg items-start gap-10 lg:max-w-none lg:grid-cols-[0.9fr_1.1fr] lg:gap-12 xl:gap-16">
+          <aside aria-label="About the workshop" className="hidden min-w-0 lg:block lg:pt-5">
+            <span className="inline-flex rounded-full bg-[#E3EDD6] px-4 py-2 text-xs font-bold uppercase tracking-wider">Free live workshop</span>
+            <h2 className="mt-5 text-[clamp(2.25rem,3.8vw,3rem)] font-bold leading-[1.1] tracking-[-0.04em]">A calmer home<br />starts here.</h2>
+            <p className="mb-7 mt-4 max-w-sm text-base leading-relaxed text-[#596258]">Practical guidance for more connected parenting.</p>
+            <WorkshopSchedule />
+            <figure className="mt-7 flex items-center gap-5 overflow-hidden rounded-2xl border border-[#103723]/10 bg-white p-3 shadow-sm">
+              <div className="relative size-28 shrink-0 overflow-hidden rounded-xl"><Image src="/profile.png" alt="Pravesh Gupta" fill sizes="112px" className="object-cover object-[center_20%]" /></div>
+              <figcaption className="min-w-0 py-3"><p className="text-xs text-[#667060]">Your mentor</p><p className="mt-1 text-xl font-bold">Pravesh Gupta</p><p className="mt-1 text-sm text-[#596258]">Parenting Advisor</p></figcaption>
+            </figure>
+            <ul className="mt-7 grid grid-cols-3 gap-4 text-center text-xs leading-relaxed text-[#34513C]">
+              {[
+                { Icon: Users, label: "Understand your child" },
+                { Icon: HeartHandshake, label: "Build stronger connections" },
+                { Icon: CalendarCheck2, label: "Create healthier routines" },
+              ].map(({ Icon, label }) => <li key={label} className="flex flex-col items-center gap-3"><span className="rounded-xl bg-[#EAF0DE] p-3"><Icon className="size-6" aria-hidden="true" /></span>{label}</li>)}
+            </ul>
+          </aside>
+          <div className="min-w-0 lg:rounded-3xl lg:border lg:border-[#103723]/12 lg:bg-white lg:p-8 lg:shadow-[0_8px_24px_rgba(16,55,35,0.05)] xl:p-9">
+            {successData ? (
+              <div role="status" className="py-8 text-center">
+                <CheckCircle2 className="mx-auto size-12 text-[#237344]" aria-hidden="true" />
+                <SuccessHeading id={`${id}-title`} className="mt-5 text-3xl font-bold">You’re registered!</SuccessHeading>
+                <p className="mt-4 text-sm leading-relaxed text-[#596258]">Your workshop is on {successData.webinarDay}, {successData.webinarDate} at {successData.webinarTime} IST.</p>
+                <div className="mt-6"><WhatsAppContactButton variant="outline" label="Need help? Chat with us" /></div>
               </div>
-            </div>
-
-            <div className="absolute bottom-8 left-10 animate-float delay-700">
-              <div className="bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-md border border-stone-100 flex items-center gap-3">
-                <div className="bg-[#3B5E2B] p-2 rounded-xl text-white">
-                  <Heart className="w-5 h-5 fill-current" />
-                </div>
-                <div>
-                  <p className="text-sm font-black text-[#4A2B12] leading-none">
-                    25K+
-                  </p>
-                  <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">
-                    Happy Parents
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative group">
-              <div className="absolute inset-0 bg-[#3B5E2B]/10 rounded-full blur-3xl group-hover:bg-[#3B5E2B]/20 transition-all duration-700" />
-              <div className="relative w-80 h-[400px] bg-white rounded-[2rem] overflow-hidden border-8 border-white shadow-xl">
-                <Image
-                  fill
-                  alt="Parenting Expert"
-                  src="/profile.png"
-                  className="object-cover hover:scale-105 transition-transform duration-1000"
-                />
-              </div>
-            </div>
-
-            <div className="mt-8 text-center">
-              <h3 className="text-2xl font-black text-[#4A2B12]">
-                Mr. Pravesh Gupta
-              </h3>
-              <p className="text-sm font-black text-[#3B5E2B] uppercase tracking-[0.3em] mt-1">
-                Child Psychology Expert
-              </p>
-            </div>
+            ) : (
+              <>
+                <span className="mb-4 inline-flex rounded-full bg-[#E3EDD6] px-3 py-2 text-[10px] font-bold uppercase tracking-wider lg:hidden">Free live workshop</span>
+                {showStickyBar ? <h2 id={`${id}-title`} className="text-3xl font-bold leading-[1.12] tracking-[-0.035em]">Join the free workshop</h2> : <h1 id={`${id}-title`} className="text-3xl font-bold leading-[1.12] tracking-[-0.035em] sm:text-4xl lg:text-3xl">Join the free workshop</h1>}
+                <p className="mt-3 text-sm leading-relaxed text-[#596258]"><span className="lg:hidden">A calmer home starts with one small step.</span><span className="hidden lg:inline">Enter your details to reserve your place.</span></p>
+                <div className="mt-5 lg:hidden"><WorkshopSchedule /></div>
+                <form ref={formRef} onSubmit={handleSubmit} noValidate aria-busy={isSubmitting} className="mt-6">
+                  <fieldset disabled={isSubmitting} className="min-w-0 space-y-3">
+                    <legend className="sr-only">Your registration details. All fields are required.</legend>
+                    <div>
+                      <label htmlFor={`${id}-name`} className="mb-2 block text-sm font-semibold">Parent’s full name</label>
+                      <input id={`${id}-name`} name="name" type="text" autoComplete="name" maxLength={100} required value={formData.name} onChange={handleChange} onBlur={handleBlur} aria-invalid={!!errors.name} aria-describedby={`${id}-name-help`} placeholder="e.g. Rahul Singh" className={inputClass("name")} />
+                      {errorRow("name")}
+                    </div>
+                    <div>
+                      <label htmlFor={`${id}-email`} className="mb-2 block text-sm font-semibold">Email address</label>
+                      <input id={`${id}-email`} name="email" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} maxLength={254} required value={formData.email} onChange={handleChange} onBlur={handleBlur} aria-invalid={!!errors.email} aria-describedby={`${id}-email-help`} placeholder="you@example.com" className={inputClass("email")} />
+                      {errorRow("email")}
+                    </div>
+                    <div>
+                      <label htmlFor={`${id}-phone`} className="mb-2 block text-sm font-semibold">WhatsApp number</label>
+                      <div className="relative">
+                        <span aria-hidden="true" className="pointer-events-none absolute inset-y-3 left-0 flex w-16 items-center justify-center border-r border-[#BCC5BC] text-base font-semibold">+91</span>
+                        <input id={`${id}-phone`} name="phone" type="tel" inputMode="tel" autoComplete="tel-national" maxLength={24} required value={formData.phone} onChange={handleChange} onBlur={handleBlur} aria-invalid={!!errors.phone} aria-describedby={`${id}-phone-help`} aria-label="WhatsApp number, India country code plus 91" placeholder="10-digit mobile number" className={`${inputClass("phone")} pl-20`} />
+                      </div>
+                      {errorRow("phone")}
+                    </div>
+                    <div>
+                      <label className="flex min-h-11 cursor-pointer items-start gap-3 text-xs leading-5 text-[#455745] sm:text-sm">
+                        <input name="whatsappConsent" type="checkbox" required checked={formData.whatsappConsent} onChange={handleChange} onBlur={handleBlur} aria-invalid={!!errors.whatsappConsent} aria-describedby={`${id}-whatsappConsent-help`} className="mt-0.5 size-5 shrink-0 cursor-pointer accent-[#237344] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#237344]" />
+                        <span>Send me workshop details and reminders on WhatsApp.</span>
+                      </label>
+                      {errorRow("whatsappConsent")}
+                    </div>
+                  </fieldset>
+                  {errorMessage && <div role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-[#E4C17C] bg-[#FFF8E8] p-3 text-sm leading-relaxed text-[#795220]"><AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span>{errorMessage}</span></div>}
+                  <button type="submit" disabled={isSubmitting} className={buttonClass}>
+                    {isSubmitting ? <><Loader2 className="size-5 animate-spin" aria-hidden="true" />Registering…</> : <>Reserve My Free Spot<ArrowRight className="size-5 shrink-0" aria-hidden="true" /></>}
+                  </button>
+                  <p role="status" aria-live="polite" className="sr-only">{isSubmitting ? "Registering. Please wait." : ""}</p>
+                  <p className="mt-4 text-center text-[11px] leading-5 text-[#667060]">By registering, you agree to our <Link href="/terms-of-service" target="_blank" rel="noopener noreferrer" className="font-medium text-[#237344] underline underline-offset-2">Terms</Link> &amp; <Link href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="font-medium text-[#237344] underline underline-offset-2">Privacy Policy</Link>.</p>
+                  <div className="mt-5"><WhatsAppContactButton variant="outline" label="Need help? Chat with us" /></div>
+                </form>
+              </>
+            )}
           </div>
         </div>
       </div>
-
-      {showStickyBar && (
-        <div
-          className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-white/95 border-t border-stone-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]"
-          style={{
-            paddingBottom: "env(safe-area-inset-bottom, 0px)",
-          }}
-        >
-          <div className="max-w-7xl mx-auto px-3 md:px-6 py-3 flex items-center justify-between gap-2">
-            <div className="flex shrink-0 items-center gap-2">
-              <div className="hidden sm:block bg-red-50 p-2 rounded-xl">
-                <Clock className="w-5 h-5 text-red-500 animate-pulse" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest leading-none mb-1">
-                  Closing Soon
-                </p>
-                <div className="text-xl sm:text-2xl font-mono font-black text-[#4A2B12] tabular-nums tracking-tighter">
-                  {formatTime(remainingTime)}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-stretch gap-2">
-              <button
-                onClick={() => (window.location.href = "/form")}
-                className="bg-brand-brown text-white hover:bg-brand-green cursor-pointer font-black text-[10px] sm:text-sm tracking-wide px-3 sm:px-8 py-4 rounded-2xl transition-colors shadow-lg uppercase flex items-center gap-1"
-              >
-                FREE ACCESS <ChevronRight className="w-4 h-4" />
-              </button>
-              <WhatsAppContactButton />
-            </div>
-          </div>
+      {showStickyBar && stickyVisible && !successData && (
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-[#103723]/10 bg-white px-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] lg:hidden">
+          <div className="mx-auto flex max-w-lg items-stretch gap-3"><Link href="/form" className={buttonClass}>Register Now — Free<ArrowRight className="size-5" aria-hidden="true" /></Link><WhatsAppContactButton variant="outline" /></div>
         </div>
       )}
-
-      <style jsx>{`
-        @keyframes float {
-          0%,
-          100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-15px);
-          }
-        }
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
-      `}</style>
-    </div>
+    </section>
   );
 }

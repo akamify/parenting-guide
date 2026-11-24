@@ -69,10 +69,11 @@ async function callWaspAkamify({ campaignName, destination, variables, headerVar
       "X-API-KEY": apiKey,
     },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(10000),
   });
 
   const text = await response.text();
-  console.log("WaspAkamify RAW response:", text);
+  if (WASPAKAMIFY_DEBUG) console.log("WhatsApp provider HTTP status", response.status);
 
   let data = null;
   try {

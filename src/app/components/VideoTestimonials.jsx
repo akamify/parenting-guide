@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useId, useRef, useState } from "react";
+import { ArrowRight, ChevronLeft, ChevronRight, Play, X } from "lucide-react";
 
 const testimonials = [
   {
@@ -54,124 +56,152 @@ const testimonials = [
   },
 ];
 
-const VideoCard = ({ testimonial, isActive, onBecomeActive }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [thumbnailFallback, setThumbnailFallback] = useState(false);
+const storyDetails = [
+  { category: "Emotional connection", title: "Understanding my child's tantrums", excerpt: "I was struggling with my 4-year-old's daily meltdowns. Now, our home is much more peaceful." },
+  { category: "Healthy routines", title: "A screen-free routine", excerpt: "Screen addiction was ruining our family dinners. My kids are now playing outdoors and reading more than ever." },
+  { category: "Communication", title: "Building a deeper connection", excerpt: "I felt like my teenager was drifting away. We've gone from constant arguments to meaningful conversations." },
+  { category: "Positive discipline", title: "Positive discipline that works", excerpt: "I never liked yelling, but I didn't know another way. This program showed me how to use positive discipline." },
+  { category: "Parent support", title: "Support for single parents", excerpt: "Being a single mom is tough, but having a roadmap made it manageable." },
+  { category: "Healthy routines", title: "Better sleep for everyone", excerpt: "Bedtime used to be a 2-hour battle. With the new routine, my kids now go to bed happily." },
+];
 
-  const truncatedDescription = testimonial.description.slice(0, 100) + "...";
+const focusClass = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#237344]";
 
-  const embedUrl = `https://www.youtube.com/embed/${testimonial.videoId}?autoplay=1&mute=1&rel=0&showinfo=0&iv_load_policy=3&playsinline=1`;
-  const thumbnailSrc =
-    (!thumbnailFallback && testimonial.thumbnail) ||
-    (thumbnailFallback
-      ? `https://img.youtube.com/vi/${testimonial.videoId}/hqdefault.jpg`
-      : `https://img.youtube.com/vi/${testimonial.videoId}/maxresdefault.jpg`);
+function VideoCard({ story, details, isActive, onPlay, onClose }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const playRef = useRef(null);
+
+  const closeVideo = () => {
+    onClose();
+    requestAnimationFrame(() => playRef.current?.focus({ preventScroll: true }));
+  };
 
   return (
-    <div
-      className={`group relative flex flex-col overflow-hidden rounded-[1rem] bg-white transition-all duration-500 ${
-        isActive
-          ? "ring-4 ring-[#2a180a] border border-[#2a180a] shadow-md"
-          : "border border-[#2a180a] hover:shadow-md"
-      }`}
-    >
-      {/* Video Section */}
-      <div className="relative w-full aspect-video bg-gray-100">
+    <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-[1.25rem] border border-[#CCD5C7] bg-white shadow-[0_4px_12px_rgba(16,55,35,0.035)]">
+      <div className="relative aspect-video w-full shrink-0 bg-[#EAF0DE]">
         {isActive ? (
           <iframe
-            src={embedUrl}
-            title={testimonial.title}
-            className="absolute top-0 left-0 w-full h-full object-cover"
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            src={`https://www.youtube-nocookie.com/embed/${story.videoId}?autoplay=1&rel=0&playsinline=1`}
+            title={details.title}
+            className="absolute inset-0 size-full border-0"
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
           />
         ) : (
-          <button
-            type="button"
-            aria-label={`Play video: ${testimonial.title}`}
-            className="relative block w-full h-full cursor-pointer focus-visible:outline-4 focus-visible:outline-brand-green"
-            onClick={onBecomeActive}
-          >
-            <Image
-              src={thumbnailSrc}
-              alt={testimonial.title}
-              fill
-              sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-              className="object-cover transition-transform duration-700 group-hover:scale-110"
-              onError={() => setThumbnailFallback(true)}
-              unoptimized
-            />
-            {/* Play Button Overlay */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-16 h-16 bg-black/90 rounded-full flex items-center justify-center shadow-xl">
-                <div className="w-0 h-0 border-t-[10px] border-t-transparent border-l-[18px] border-l-brand-green border-b-[10px] border-b-transparent ml-1"></div>
-              </div>
-            </div>
+          <button ref={playRef} type="button" onClick={onPlay} aria-label={`Play story: ${details.title}`} className="group relative block size-full cursor-pointer focus-visible:outline-4 focus-visible:-outline-offset-4 focus-visible:outline-[#237344]">
+            {!imageFailed && <Image src={story.thumbnail} alt="" fill sizes="(min-width: 1280px) 370px, (min-width: 1024px) 30vw, (min-width: 640px) 45vw, 85vw" className="object-cover" onError={() => setImageFailed(true)} />}
+            <span className="absolute inset-0 flex items-center justify-center">
+              <span className="inline-flex size-14 items-center justify-center rounded-full border-2 border-white bg-[#237344] text-white shadow-md transition-colors group-hover:bg-[#195934] sm:size-16"><Play className="ml-0.5 size-6 fill-current stroke-[1.5]" aria-hidden="true" /></span>
+            </span>
           </button>
         )}
       </div>
-
-      {/* Content Section */}
-      <div className="flex-1 p-6 md:p-8 flex flex-col">
-        <h3
-          className={`text-xl font-black mb-3 leading-tight ${isActive ? "text-[#2a180a]" : "text-[#2a180a]"}`}
-        >
-          {testimonial.title}
-        </h3>
-
-        <div className="text-gray-600 leading-relaxed text-sm font-medium">
-          <p>{isExpanded ? testimonial.description : truncatedDescription}</p>
-        </div>
-
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="mt-3 self-start text-xs font-semibold uppercase tracking-wide text-[#2a180a] cursor-pointer hover:text-[#75c13f] transition-colors"
-        >
-          {isExpanded ? "Close" : "Read Full Story"}
+      <div className="flex flex-1 flex-col p-4 sm:p-5">
+        <span className="mb-3 w-fit rounded-full bg-[#EAF0DE] px-3 py-1.5 text-[11px] font-semibold leading-4 text-[#345C33]">{details.category}</span>
+        <h3 className="text-lg font-bold leading-snug tracking-[-0.02em] text-[#103723] sm:text-xl">{details.title}</h3>
+        <p className="mb-3 mt-3 text-sm leading-relaxed text-[#596258]">{details.excerpt}</p>
+        <button type="button" onClick={isActive ? closeVideo : onPlay} aria-label={isActive ? `Close video: ${details.title}` : `Watch story: ${details.title}`} className={`mt-auto inline-flex min-h-11 w-fit cursor-pointer items-center gap-2 rounded-md text-sm font-semibold text-[#237344] hover:text-[#195934] ${focusClass}`}>
+          {isActive ? <>Close video<X className="size-4" aria-hidden="true" /></> : <>Watch story<ArrowRight className="size-4" aria-hidden="true" /></>}
         </button>
       </div>
-    </div>
+    </article>
   );
-};
+}
 
-const VideoTestimonials = () => {
+export default function VideoTestimonials() {
+  const id = useId();
+  const railRef = useRef(null);
+  const cardRefs = useRef([]);
   const [activeVideoId, setActiveVideoId] = useState(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [showAll, setShowAll] = useState(false);
+
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail) return;
+    let frame;
+    const updatePosition = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (window.matchMedia("(min-width: 640px)").matches) return;
+        const index = cardRefs.current.reduce((nearest, card, i) =>
+          Math.abs(card.offsetLeft - rail.scrollLeft) < Math.abs(cardRefs.current[nearest].offsetLeft - rail.scrollLeft) ? i : nearest, 0);
+        setCurrentIndex(index);
+        // Scrolling away stops the old player instead of leaving hidden audio running.
+        setActiveVideoId((active) => active && active !== testimonials[index].id ? null : active);
+      });
+    };
+    rail.addEventListener("scroll", updatePosition, { passive: true });
+    const resize = new ResizeObserver(updatePosition);
+    resize.observe(rail);
+    return () => {
+      cancelAnimationFrame(frame);
+      rail.removeEventListener("scroll", updatePosition);
+      resize.disconnect();
+    };
+  }, []);
+
+  const moveTo = (index) => {
+    const rail = railRef.current;
+    const card = cardRefs.current[index];
+    if (!rail || !card) return;
+    rail.scrollTo({ left: card.offsetLeft, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+    setActiveVideoId(null);
+  };
+
+  const handleKeys = (event) => {
+    // Keep arrow keys inside the player and focused buttons available to those controls.
+    if (event.target !== event.currentTarget || window.matchMedia("(min-width: 640px)").matches) return;
+    let next;
+    if (event.key === "ArrowRight") next = Math.min(testimonials.length - 1, currentIndex + 1);
+    else if (event.key === "ArrowLeft") next = Math.max(0, currentIndex - 1);
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = testimonials.length - 1;
+    if (next !== undefined) {
+      event.preventDefault();
+      moveTo(next);
+    }
+  };
 
   return (
-    <section className="w-full bg-[#FDFBF7] py-10 px-4 overflow-hidden">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-10 max-w-3xl mx-auto">
-          <span className="mb-4 inline-flex items-center rounded-full bg-[#2d1a0a] px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.25em] text-white border border-brand-green/20">
-            Success Stories
-          </span>
-          <h2 className="text-4xl md:text-6xl font-black text-[#2a180a] mb-6 tracking-tight">
-            Happy Parents, <br />
-            <span className="text-brand-green italic font-serif">
-              Brighter Futures
-            </span>
-          </h2>
-          <p className="text-lg text-gray-500 font-medium leading-relaxed">
-            Real families who have transformed their household dynamics through
-            Advisor Pravesh Kumar’s proven guidance.
-          </p>
-        </div>
+    <section id="parent-stories" aria-labelledby={`${id}-title`} className="bg-[#FDFBF7] text-[#103723]">
+      <div className="mx-auto max-w-7xl px-5 pb-10 pt-8 sm:px-8 sm:pb-14 lg:px-12 lg:pt-10">
+        <div className="border-t border-[#103723]/12 pt-8 lg:border-t-0 lg:pt-0">
+          <div className="mb-6 flex items-end justify-between gap-8 lg:mb-8">
+            <div className="min-w-0">
+              <p className="mb-4 inline-flex rounded-full bg-[#E3EDD6] px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.15em] sm:text-xs">Parent stories</p>
+              <h2 id={`${id}-title`} className="text-[clamp(1.75rem,7.5vw,2rem)] font-bold leading-[1.12] tracking-[-0.035em] sm:text-4xl lg:text-[2.5rem]">Small changes.<br />Stronger family bonds.</h2>
+              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[#667060] sm:text-base"><span className="lg:hidden">Explore stories from our parenting community.</span><span className="hidden lg:inline">Explore the parenting experiences shared in our workshop community.</span></p>
+            </div>
+            <button type="button" aria-expanded={showAll} aria-controls={`${id}-stories`} onClick={() => { setShowAll(!showAll); setActiveVideoId(null); }} className={`hidden min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-md text-sm font-semibold text-[#237344] hover:text-[#195934] lg:inline-flex ${focusClass}`}>
+              {showAll ? "Show fewer stories" : "View all stories"}<ArrowRight aria-hidden="true" className="size-4" />
+            </button>
+          </div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
-          {testimonials.map((testimonial) => (
-            <VideoCard
-              key={testimonial.id}
-              testimonial={testimonial}
-              isActive={activeVideoId === testimonial.id}
-              onBecomeActive={() => setActiveVideoId(testimonial.id)}
-            />
-          ))}
+          <p id={`${id}-instructions`} className="sr-only">Swipe or use the previous and next buttons to browse stories. When the story list is focused, use left and right arrow keys.</p>
+          <ul id={`${id}-stories`} ref={railRef} aria-label="Parent stories" aria-describedby={`${id}-instructions`} tabIndex={0} onKeyDown={handleKeys} className={`relative flex snap-x snap-mandatory items-stretch gap-4 overflow-x-auto overscroll-x-contain rounded-2xl pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:snap-none sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:pb-0 lg:grid-cols-3 ${focusClass}`}>
+            {testimonials.map((story, index) => (
+              <li key={story.id} ref={(element) => { cardRefs.current[index] = element; }} className={`min-w-0 shrink-0 basis-[calc(100%-2.5rem)] snap-start scroll-m-0 ${index > 2 && !showAll ? "lg:hidden" : ""}`}>
+                <VideoCard story={story} details={storyDetails[index]} isActive={activeVideoId === story.id} onPlay={() => setActiveVideoId(story.id)} onClose={() => setActiveVideoId(null)} />
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-4 flex items-center justify-between gap-4 sm:hidden">
+            <p role="status" aria-live="polite" aria-atomic="true" className="text-sm text-[#667060]">{currentIndex + 1} of {testimonials.length} stories</p>
+            <div className="flex gap-3">
+              <button type="button" aria-label="Previous story" aria-controls={`${id}-stories`} disabled={currentIndex === 0} onClick={() => moveTo(Math.max(0, currentIndex - 1))} className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-full border border-[#237344] text-[#237344] transition-colors hover:bg-[#EAF0DE] disabled:cursor-default disabled:border-[#D4DCCF] disabled:text-[#A2ACA0] ${focusClass}`}><ChevronLeft className="size-5" aria-hidden="true" /></button>
+              <button type="button" aria-label="Next story" aria-controls={`${id}-stories`} disabled={currentIndex === testimonials.length - 1} onClick={() => moveTo(Math.min(testimonials.length - 1, currentIndex + 1))} className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-full border border-[#237344] text-[#237344] transition-colors hover:bg-[#EAF0DE] disabled:cursor-default disabled:border-[#D4DCCF] disabled:text-[#A2ACA0] ${focusClass}`}><ChevronRight className="size-5" aria-hidden="true" /></button>
+            </div>
+          </div>
+
+          <div className="mt-7 flex flex-col gap-5 rounded-3xl bg-[#EAF0DE] p-5 sm:p-6 lg:mt-8 lg:flex-row lg:items-center lg:justify-between lg:gap-8 lg:px-7">
+            <div><p className="text-xl font-bold leading-snug tracking-tight lg:text-2xl">Start your parenting journey.</p><p className="mt-2 text-xs leading-relaxed text-[#667060] sm:text-sm"><span className="hidden sm:inline">Free live workshop &middot; </span>Every Sunday &middot; 11:00 AM IST</p></div>
+            <Link href="/form" className={`inline-flex min-h-13 shrink-0 items-center justify-center gap-3 rounded-2xl bg-[#237344] px-5 py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#195934] sm:text-base ${focusClass}`}>Join the free workshop<ArrowRight className="size-5 shrink-0" aria-hidden="true" /></Link>
+          </div>
         </div>
       </div>
     </section>
   );
-};
-
-export default VideoTestimonials;
+}

@@ -1,5 +1,7 @@
 import ThankYouClient from "./ThankYouClient";
 
+export const metadata = { title: "Registration Confirmation", robots: { index: false, follow: false } };
+
 export default function ThankYouPage() {
   const communityLink =
     process.env.WHATSAPP_COMMUNITY_URL ||
