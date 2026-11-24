@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import GalleryCard from "./GalleryCard";
 import WhatsAppContactButton from "../components/WhatsAppContactButton";
 
@@ -60,26 +59,6 @@ const galleryItems = [
 ];
 
 const GallerySection = () => {
-  const [visibleItems, setVisibleItems] = useState([]);
-  const itemRefs = useRef([]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const index = Number(entry.target.dataset.index);
-            setVisibleItems((prev) => [...new Set([...prev, index])]);
-          }
-        });
-      },
-      { threshold: 0.1, rootMargin: "50px 0px" }
-    );
-
-    itemRefs.current.forEach((ref) => ref && observer.observe(ref));
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <section id="gallery" className="py-10 sm:py-10 bg-[#FDFBF7] relative overflow-hidden">
       {/* Decorative background elements */}
@@ -104,11 +83,7 @@ const GallerySection = () => {
           {galleryItems.map((item, index) => (
             <div
               key={index}
-              ref={(el) => (itemRefs.current[index] = el)}
-              data-index={index}
-              className={`opacity-0 translate-y-12 transition-all duration-700 ease-out ${
-                visibleItems.includes(index) ? "opacity-100 translate-y-0" : ""
-              } ${index % 3 === 1 ? "delay-150" : index % 3 === 2 ? "delay-300" : ""}`}
+              className="min-w-0"
             >
               <GalleryCard {...item} />
             </div>

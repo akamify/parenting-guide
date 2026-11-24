@@ -14,7 +14,7 @@ import Link from "next/link";
 export default function Footer() {
   return (
     // Background ko light rakha hai (#FDFBF7 - Cream White)
-    <footer className="relative bg-[#FDFBF7] text-[#4A2B12] overflow-hidden mb-20 md:mb-0 border-t border-stone-200">
+    <footer className="relative bg-[#FDFBF7] text-[#4A2B12] overflow-hidden pb-[calc(6rem+env(safe-area-inset-bottom,0px))] lg:pb-0 border-t border-stone-200">
       {/* Background Subtle Effects - Light & Airy */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Soft Green Glow - Top Right */}

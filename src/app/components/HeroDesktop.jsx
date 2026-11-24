@@ -1,29 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import WhatsAppContactButton from "./WhatsAppContactButton";
 
 const HeroDesktop = () => {
-  const [headerVisible, setHeaderVisible] = useState(true);
-  const lastScrollY = useRef(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const current = window.scrollY;
-      if (current > lastScrollY.current && current > 120) {
-        setHeaderVisible(false);
-      } else {
-        setHeaderVisible(true);
-      }
-      lastScrollY.current = current;
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
   return (
     <div
-      id="hero"
-      className="relative min-h-screen bg-[#FDFBF7] text-[#4A2B12] overflow-hidden flex flex-col font-sans"
+      className="relative min-h-svh bg-[#FDFBF7] text-[#4A2B12] overflow-hidden flex flex-col font-sans"
     >
       {/* --- Background Elements --- */}
       {/* Light Professional Background Image (Soft abstract parenting/nature style) */}
@@ -34,18 +16,16 @@ const HeroDesktop = () => {
       <div className="absolute -right-20 top-1/2 w-[400px] h-[400px] bg-brand-brown/5 rounded-full blur-[100px] animate-pulse delay-700" />
 
       {/* --- Header --- */}
-      <header
-        className={`fixed inset-x-0 top-0 z-[100] transition-all duration-500 transform ${
-          headerVisible ? "translate-y-0" : "-translate-y-full"
-        }`}
-      >
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-gray-200 bg-white/95 shadow-sm">
         <div className="backdrop-blur-xl bg-white/70 border-b border-brand-brown/5 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl overflow-hidden ring-1 ring-brand-green/10 bg-white flex items-center justify-center p-1">
-                <img
+                <Image
                   src="/logo.png"
-                  alt="Logo"
+                  width={48}
+                  height={48}
+                  alt="Parenting Guide"
                   className="w-full h-full object-contain"
                 />
               </div>
@@ -106,12 +86,12 @@ const HeroDesktop = () => {
                 </div>
 
                 <div className="flex w-full min-w-0 items-stretch gap-2 sm:flex-1">
-                  <button
-                    onClick={() => (window.location.href = "/form")}
-                    className="min-w-0 flex-1 py-5 px-3 lg:px-5 bg-[#2a180a] hover:bg-gradient-to-l hover:from-brand-brown hover:to-[#2a180a] text-white font-black uppercase tracking-wider rounded-[1rem] shadow-xl hover:shadow-2xl transition-all duration-500 transform  active:scale-95 cursor-pointer animate-btn-breath transform-gpu transition-all duration-500 ease-out hover:-translate-y-1hover:scale-[1.02] hover:text-brand-brown hover:tracking-wide hover:scale-[1.03] active:scale-[0.98]"
+                  <Link
+                    href="/form"
+                    className="min-w-0 flex-1 rounded-2xl bg-brand-brown px-3 py-5 text-center font-black uppercase tracking-wide text-white shadow-xl transition-colors hover:bg-brand-green focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-green lg:px-5"
                   >
                     Register Now — Free
-                  </button>
+                  </Link>
                   <WhatsAppContactButton />
                 </div>
               </div>
@@ -141,8 +121,10 @@ const HeroDesktop = () => {
 
                 {/* Image Wrapper */}
                 <div className="relative h-full w-full rounded-[2rem] overflow-hidden border-[8px] border-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] group">
-                  <img
+                  <Image
                     src="/profile.png" // Replace with your actual mentor image
+                    fill
+                    sizes="(min-width: 1024px) 450px, 320px"
                     alt="Advisor Pravesh Gupta"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-in-out"
                   />

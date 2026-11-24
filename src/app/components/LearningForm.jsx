@@ -26,8 +26,6 @@ const calculateWebinarData = () => {
   return { webinarDay, webinarDate, webinarTime, webinarType };
 };
 
-const initialWebinarData = calculateWebinarData();
-
 const calculateBookedSeats = () => {
   const now = new Date();
   const seatCount = 92 + now.getDate() + Math.floor(now.getHours() / 2);
@@ -37,16 +35,16 @@ const calculateBookedSeats = () => {
 export default function LearningForm({ showStickyBar = true }) {
   const router = useRouter();
   const formRef = useRef(null);
-  const [bookedSeats] = useState(() => calculateBookedSeats());
+  const [bookedSeats, setBookedSeats] = useState(100);
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
-    webinarDay: initialWebinarData.webinarDay,
-    webinarDate: initialWebinarData.webinarDate,
-    webinarTime: initialWebinarData.webinarTime,
-    webinarType: initialWebinarData.webinarType,
+    webinarDay: "",
+    webinarDate: "",
+    webinarTime: "",
+    webinarType: "Mindful Parenting Workshop",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,26 +52,28 @@ export default function LearningForm({ showStickyBar = true }) {
   const [remainingTime, setRemainingTime] = useState(30 * 60);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedTimer = localStorage.getItem("parentingFormTimer");
-      if (savedTimer) {
-        const parsedTimer = parseInt(savedTimer, 10);
-        if (parsedTimer > 0) setRemainingTime(parsedTimer);
+    let deadline = Date.now() + 30 * 60 * 1000;
+    try {
+      const savedDeadline = Number(localStorage.getItem("parentingFormDeadline"));
+      if (Number.isFinite(savedDeadline) && savedDeadline > Date.now()) {
+        deadline = savedDeadline;
+      } else {
+        localStorage.setItem("parentingFormDeadline", String(deadline));
       }
+    } catch {
+      // The form remains usable when browser storage is unavailable.
     }
-  }, []);
-
-  useEffect(() => {
+    const initialize = setTimeout(() => {
+      setBookedSeats(calculateBookedSeats());
+      setFormData((prev) => ({ ...prev, ...calculateWebinarData() }));
+    }, 0);
     const timer = setInterval(() => {
-      setRemainingTime((prev) => {
-        const newTime = prev - 1;
-        if (typeof window !== "undefined") {
-          localStorage.setItem("parentingFormTimer", newTime.toString());
-        }
-        return newTime <= 0 ? 30 * 60 : newTime;
-      });
+      setRemainingTime(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
     }, 1000);
-    return () => clearInterval(timer);
+    return () => {
+      clearTimeout(initialize);
+      clearInterval(timer);
+    };
   }, []);
 
   const handleChange = (e) => {
@@ -90,6 +90,7 @@ export default function LearningForm({ showStickyBar = true }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setIsSubmitting(true);
     try {
       const formattedPhone = cleanPhone10(formData.phone);
@@ -123,7 +124,7 @@ export default function LearningForm({ showStickyBar = true }) {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#FDFBF7] flex items-center justify-center py-12 px-4 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-[calc(7rem+env(safe-area-inset-bottom,0px))] overflow-hidden">
+    <div className="relative min-h-svh bg-[#FDFBF7] flex items-center justify-center py-12 px-4 overflow-hidden">
       {/* --- Earthy Background Design --- */}
       <div className="absolute inset-0 z-0">
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#3B5E2B_0.5px,transparent_0.5px)] [background-size:32px_32px] opacity-[0.1]" />
@@ -204,10 +205,10 @@ export default function LearningForm({ showStickyBar = true }) {
                     WhatsApp Number
                   </label>
                   <div className="flex gap-3">
-                    <div className="flex items-center justify-center w-16 bg-stone-100 border border-stone-100 rounded-2xl text-[#4A2B12] font-black text-xs">
+                    <div className="flex shrink-0 items-center justify-center w-12 sm:w-16 bg-stone-100 border border-stone-100 rounded-2xl text-[#4A2B12] font-black text-xs">
                       +91
                     </div>
-                    <div className="relative flex-1 group">
+                    <div className="relative min-w-0 flex-1 group">
                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-300 group-focus-within:text-[#3B5E2B] transition-colors" />
                       <input
                         type="tel"
@@ -226,7 +227,7 @@ export default function LearningForm({ showStickyBar = true }) {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className={`group min-w-0 flex-1 font-black text-sm uppercase tracking-[0.2em] px-2 py-5 rounded-2xl transition-all duration-500 shadow-xl flex items-center justify-center gap-2 ${
+                    className={`group min-w-0 flex-1 border border-transparent font-black text-xs sm:text-sm uppercase tracking-wide px-2 py-5 rounded-2xl transition-colors duration-300 shadow-xl flex items-center justify-center gap-2 ${
                       isSubmitting
                         ? "bg-stone-200 text-stone-400"
                         : "bg-[#4A2B12] hover:border hover:border-[#4A2B12] hover:text-[#4A2B12] cursor-pointer hover:bg-white text-white"
@@ -308,15 +309,14 @@ export default function LearningForm({ showStickyBar = true }) {
 
       {showStickyBar && (
         <div
-          className="lg:hidden fixed inset-x-0 z-[100] bg-white/80 backdrop-blur-xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.4)]"
+          className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-white/95 border-t border-stone-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]"
           style={{
-            bottom: "env(safe-area-inset-bottom, 0px)",
-            paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))",
+            paddingBottom: "env(safe-area-inset-bottom, 0px)",
           }}
         >
-          <div className="max-w-7xl mx-auto px-2 md:px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="bg-red-50 p-2 rounded-xl">
+          <div className="max-w-7xl mx-auto px-3 md:px-6 py-3 flex items-center justify-between gap-2">
+            <div className="flex shrink-0 items-center gap-2">
+              <div className="hidden sm:block bg-red-50 p-2 rounded-xl">
                 <Clock className="w-5 h-5 text-red-500 animate-pulse" />
               </div>
               <div>
@@ -332,7 +332,7 @@ export default function LearningForm({ showStickyBar = true }) {
             <div className="flex items-stretch gap-2">
               <button
                 onClick={() => (window.location.href = "/form")}
-                className="hover:bg-white bg-[#4A2B12] text-white hover:text-[#4A2B12] hover:border hover:border-[#4A2B12] cursor-pointer font-black text-xs sm:text-sm tracking-[0.2em] px-4 sm:px-12 py-4 rounded-2xl transition-all duration-500 shadow-lg active:scale-95 uppercase flex items-center gap-2"
+                className="bg-brand-brown text-white hover:bg-brand-green cursor-pointer font-black text-[10px] sm:text-sm tracking-wide px-3 sm:px-8 py-4 rounded-2xl transition-colors shadow-lg uppercase flex items-center gap-1"
               >
                 FREE ACCESS <ChevronRight className="w-4 h-4" />
               </button>

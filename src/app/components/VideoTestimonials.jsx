@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 const testimonials = [
   {
@@ -55,41 +55,20 @@ const testimonials = [
 ];
 
 const VideoCard = ({ testimonial, isActive, onBecomeActive }) => {
-  const containerRef = useRef(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [thumbnailFallback, setThumbnailFallback] = useState(false);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-            onBecomeActive();
-          }
-        });
-      },
-      { threshold: 0.6 },
-    );
-
-    if (container) observer.observe(container);
-    return () => {
-      if (container) observer.unobserve(container);
-    };
-  }, [onBecomeActive]);
 
   const truncatedDescription = testimonial.description.slice(0, 100) + "...";
 
   const embedUrl = `https://www.youtube.com/embed/${testimonial.videoId}?autoplay=1&mute=1&rel=0&showinfo=0&iv_load_policy=3&playsinline=1`;
   const thumbnailSrc =
-    testimonial.thumbnail ||
+    (!thumbnailFallback && testimonial.thumbnail) ||
     (thumbnailFallback
       ? `https://img.youtube.com/vi/${testimonial.videoId}/hqdefault.jpg`
       : `https://img.youtube.com/vi/${testimonial.videoId}/maxresdefault.jpg`);
 
   return (
     <div
-      ref={containerRef}
       className={`group relative flex flex-col overflow-hidden rounded-[1rem] bg-white transition-all duration-500 ${
         isActive
           ? "ring-4 ring-[#2a180a] border border-[#2a180a] shadow-md"
@@ -105,17 +84,20 @@ const VideoCard = ({ testimonial, isActive, onBecomeActive }) => {
             className="absolute top-0 left-0 w-full h-full object-cover"
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen={false}
+            allowFullScreen
           />
         ) : (
-          <div
-            className="relative w-full h-full cursor-pointer"
+          <button
+            type="button"
+            aria-label={`Play video: ${testimonial.title}`}
+            className="relative block w-full h-full cursor-pointer focus-visible:outline-4 focus-visible:outline-brand-green"
             onClick={onBecomeActive}
           >
             <Image
               src={thumbnailSrc}
               alt={testimonial.title}
               fill
+              sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
               className="object-cover transition-transform duration-700 group-hover:scale-110"
               onError={() => setThumbnailFallback(true)}
               unoptimized
@@ -126,7 +108,7 @@ const VideoCard = ({ testimonial, isActive, onBecomeActive }) => {
                 <div className="w-0 h-0 border-t-[10px] border-t-transparent border-l-[18px] border-l-brand-green border-b-[10px] border-b-transparent ml-1"></div>
               </div>
             </div>
-          </div>
+          </button>
         )}
       </div>
 
