@@ -11,7 +11,7 @@ const testimonials = [
     title: "Understanding My Child's Tantrums",
     description:
       "I was struggling with my 4-year-old's daily meltdowns. Advisor Pravesh Kumar's techniques helped me understand the 'why' behind the behavior. Now, our home is much more peaceful, and I feel like a more confident parent.",
-    videoId: "a7Erj5JUdnc",
+    videoId: "N8f2xLCBzJc",
     thumbnail: "/testimonials/img1.avif",
   },
   {
@@ -19,7 +19,7 @@ const testimonials = [
     title: "Finally, A Screen-Free Routine",
     description:
       "Screen addiction was ruining our family dinners. The step-by-step guidance on setting boundaries without being a 'villain' worked like magic. My kids are now playing outdoors and reading more than ever.",
-    videoId: "jNQXAC9IVRw",
+    videoId: "6Gr0PVTGNYo",
     thumbnail: "/testimonials/img2.avif",
   },
   {
@@ -27,7 +27,7 @@ const testimonials = [
     title: "Building Deep Connection",
     description:
       "I felt like my teenager was drifting away. The communication strategies taught in this program helped us reconnect. We've gone from constant arguments to having meaningful conversations every night.",
-    videoId: "9bZkp7q19f0",
+    videoId: "vZsnbDKgNM8",
     thumbnail: "/testimonials/img3.avif",
   },
   {
@@ -35,7 +35,7 @@ const testimonials = [
     title: "Positive Discipline That Works",
     description:
       "I never liked yelling, but I didn't know another way. This program showed me how to use positive discipline. It's not about being soft; it's about being effective. Truly a life-changing experience for us.",
-    videoId: "jNQXAC9IVRw",
+    videoId: "lDZc958Bogo",
     thumbnail: "/testimonials/img4.webp",
   },
   {
@@ -43,7 +43,7 @@ const testimonials = [
     title: "Single Parent Support",
     description:
       "Being a single mom is tough, but having a roadmap made it manageable. The advice on emotional resilience for both me and my child was exactly what I needed to hear during a difficult transition.",
-    videoId: "2Vv-BfVoq4g",
+    videoId: "jgg9uMB09fY",
     thumbnail: "/testimonials/img5.avif",
   },
   {
@@ -51,7 +51,7 @@ const testimonials = [
     title: "Better Sleep for Everyone",
     description:
       "Bedtime used to be a 2-hour battle. With the new routine and behavioral shifts suggested by Pravesh ji, my kids now go to bed happily. I finally have some 'me-time' in the evenings!",
-    videoId: "jNQXAC9IVRw",
+    videoId: "m-nuXsbI5B0",
     thumbnail: "/testimonials/img6.avif",
   },
 ];
@@ -90,7 +90,7 @@ function VideoCard({ story, details, isActive, onPlay, onClose }) {
           />
         ) : (
           <button ref={playRef} type="button" onClick={onPlay} aria-label={`Play story: ${details.title}`} className="group relative block size-full cursor-pointer focus-visible:outline-4 focus-visible:-outline-offset-4 focus-visible:outline-[#237344]">
-            {!imageFailed && <Image src={story.thumbnail} alt="" fill sizes="(min-width: 1280px) 370px, (min-width: 1024px) 30vw, (min-width: 640px) 45vw, 85vw" className="object-cover" onError={() => setImageFailed(true)} />}
+            <Image src={imageFailed ? story.thumbnail : `https://i.ytimg.com/vi/${story.videoId}/hqdefault.jpg`} alt="" fill sizes="(min-width: 1280px) 370px, (min-width: 1024px) 30vw, (min-width: 640px) 45vw, 85vw" className="object-cover" onError={() => setImageFailed(true)} />
             <span className="absolute inset-0 flex items-center justify-center">
               <span className="inline-flex size-14 items-center justify-center rounded-full border-2 border-white bg-[#237344] text-white shadow-md transition-colors group-hover:bg-[#195934] sm:size-16"><Play className="ml-0.5 size-6 fill-current stroke-[1.5]" aria-hidden="true" /></span>
             </span>
