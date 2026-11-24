@@ -2,12 +2,13 @@
 import { NextResponse } from "next/server";
 import { cleanPhone10 } from "../../lib/phone";
 import { validateForm } from "../../lib/validate";
-import { findActiveLeadByContact, saveToSheet, markCell } from "../../lib/googleSheet";
+import { findActiveLeadByContact, saveToSheet, markCell, LEAD_STATUS_COLUMNS } from "../../lib/googleSheet";
 import { isWhatsAppSendingEnabled, sendConfirmation } from "../../lib/waspakamify";
 import { getQstashTargetUrl, publishScheduled, toEpochSeconds } from "../../lib/qstash";
 import {
   formatWebinarParts,
   getNextWebinarDate,
+  getUpcomingWebinarReminders,
   getWebinarReminderTimes,
 } from "../../lib/webinar";
 
@@ -45,10 +46,9 @@ export async function POST(req) {
     const webinarDT = getNextWebinarDate(registeredAt);
     const { webinarDay, webinarDate, webinarTime } = formatWebinarParts(webinarDT);
     const webinarISO = webinarDT.toISOString();
-    const reminders = Object.entries(getWebinarReminderTimes(webinarDT));
-    const skippedReminders = reminders
-      .filter(([, scheduledAt]) => scheduledAt <= registeredAt.getTime())
-      .map(([type]) => type);
+    const reminders = getUpcomingWebinarReminders(webinarDT, registeredAt);
+    const skippedReminders = Object.keys(getWebinarReminderTimes(webinarDT))
+      .filter((type) => !reminders.some(([upcomingType]) => upcomingType === type));
 
     // Save the lead before sending or scheduling messages.
     const { rowNumber } = await saveToSheet({
@@ -119,7 +119,11 @@ export async function POST(req) {
       };
 
       for (const [type, scheduledAt] of reminders) {
-        if (skippedReminders.includes(type)) continue;
+        // Confirmation and earlier publish calls can take time. Never enqueue a past reminder.
+        if (scheduledAt <= Date.now()) {
+          await markCell(rowNumber, LEAD_STATUS_COLUMNS[type], "skipped");
+          continue;
+        }
         await publishScheduled({
           url: receiverUrl,
           body: { type, ...payload },

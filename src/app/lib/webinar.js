@@ -62,6 +62,11 @@ export function getWebinarReminderTimes(webinarDT) {
   };
 }
 
+export function getUpcomingWebinarReminders(webinarDT, now = new Date()) {
+  return Object.entries(getWebinarReminderTimes(webinarDT))
+    .filter(([, scheduledAt]) => scheduledAt > now.getTime());
+}
+
 export function formatWebinarParts(webinarDT) {
   const webinarDay = webinarDT.toLocaleDateString("en-IN", {
     timeZone: IST_TIME_ZONE,
