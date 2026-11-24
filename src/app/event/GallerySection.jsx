@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import GalleryCard from "./GalleryCard";
+import WhatsAppContactButton from "../components/WhatsAppContactButton";
 
 const galleryItems = [
   {
@@ -125,12 +126,15 @@ const GallerySection = () => {
                 Seats fill up fast for our offline sessions
               </p>
             </div>
-            <button 
-              onClick={() => window.location.href='/form'} 
-              className="rounded-2xl bg-[#2d1a0a] text-white px-8 py-4 text-sm font-black uppercase tracking-widest shadow-xl transition-all duration-300 hover:bg-brand-green hover:-translate-y-1 active:scale-95 cursor-pointer"
-            >
-              Enroll Now
-            </button>
+            <div className="flex items-stretch gap-2">
+              <button
+                onClick={() => (window.location.href = "/form")}
+                className="rounded-2xl bg-[#2d1a0a] text-white px-8 py-4 text-sm font-black uppercase tracking-widest shadow-xl transition-all duration-300 hover:bg-brand-green hover:-translate-y-1 active:scale-95 cursor-pointer"
+              >
+                Enroll Now
+              </button>
+              <WhatsAppContactButton />
+            </div>
           </div>
         </div>
       </div>

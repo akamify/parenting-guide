@@ -1,6 +1,6 @@
 // src/app/api/cron/route.js
 import { NextResponse } from "next/server";
-import { readAllLeads, markCell } from "../../lib/googleSheet";
+import { LEAD_STATUS_COLUMNS, markCell, readAllLeads, readLeadStatus } from "../../lib/googleSheet";
 import {
   isWhatsAppSendingEnabled,
   send1DayReminder,
@@ -17,18 +17,6 @@ const COL_WEBINAR_DAY = 5;  // F
 const COL_WEBINAR_DATE = 6; // G
 const COL_WEBINAR_TIME = 7; // H
 const COL_WEBINAR_ISO = 8;  // I
-
-const COL_SENT_CONFIRM = 9; // J
-const COL_SENT_1DAY = 10;   // K
-const COL_SENT_10MIN = 11;  // L
-const COL_SENT_LIVE = 12;   // M
-const COL_SENT_MORNING = 14; // O
-
-const LETTER_SENT_CONFIRM = "J";
-const LETTER_SENT_1DAY = "K";
-const LETTER_SENT_10MIN = "L";
-const LETTER_SENT_LIVE = "M";
-const LETTER_SENT_MORNING = "O";
 
 function isAuthorized(req) {
   // for GitHub Actions: /api/cron?secret=XXXX
@@ -80,11 +68,11 @@ export async function GET(req) {
       const webinarTime = row[COL_WEBINAR_TIME] || "";
       const webinarISO = row[COL_WEBINAR_ISO] || "";
 
-      const sentConfirm = String(row[COL_SENT_CONFIRM] || "no").toLowerCase();
-      const sent1Day = String(row[COL_SENT_1DAY] || "no").toLowerCase();
-      const sent10Min = String(row[COL_SENT_10MIN] || "no").toLowerCase();
-      const sentLive = String(row[COL_SENT_LIVE] || "no").toLowerCase();
-      const sentMorning = String(row[COL_SENT_MORNING] || "no").toLowerCase();
+      const sentConfirm = readLeadStatus(row, "confirmation");
+      const sent1Day = readLeadStatus(row, "1day");
+      const sent10Min = readLeadStatus(row, "10min");
+      const sentLive = readLeadStatus(row, "live");
+      const sentMorning = readLeadStatus(row, "morning");
 
       // basic validations
       if (!phone10 || phone10.length !== 10) {
@@ -115,13 +103,13 @@ export async function GET(req) {
 
       // If confirmation already sent via API, but sheet still says "no"
       if (sentConfirm === "no") {
-        await markCell(sheetRowNumber, LETTER_SENT_CONFIRM, "yes");
+        await markCell(sheetRowNumber, LEAD_STATUS_COLUMNS.confirmation, "yes");
         sentCount.confirm++;
       }
 
       if (isDue("1day", sent1Day)) {
         await send1DayReminder({ name, phone10, webinarDate, webinarDay, webinarTime });
-        await markCell(sheetRowNumber, LETTER_SENT_1DAY, "yes");
+        await markCell(sheetRowNumber, LEAD_STATUS_COLUMNS["1day"], "yes");
         sentCount.oneDay++;
         console.log("SEND 1DAY", { sheetRowNumber, diffMin, webinarISO });
         continue;
@@ -130,7 +118,7 @@ export async function GET(req) {
       // Webinar-day 09:00 AM IST window
       if (isDue("morning", sentMorning)) {
         await sendMorningReminder({ name, phone10, webinarDate, webinarDay, webinarTime });
-        await markCell(sheetRowNumber, LETTER_SENT_MORNING, "yes");
+        await markCell(sheetRowNumber, LEAD_STATUS_COLUMNS.morning, "yes");
         sentCount.morning++;
         console.log("SEND MORNING", { sheetRowNumber, webinarISO });
         continue;
@@ -139,7 +127,7 @@ export async function GET(req) {
       // 10-min window
       if (isDue("10min", sent10Min)) {
         await send10MinReminder({ name, phone10, webinarDate, webinarDay, webinarTime });
-        await markCell(sheetRowNumber, LETTER_SENT_10MIN, "yes");
+        await markCell(sheetRowNumber, LEAD_STATUS_COLUMNS["10min"], "yes");
         sentCount.tenMin++;
         console.log("SEND 10MIN", { sheetRowNumber, diffMin, webinarISO });
         continue;
@@ -148,7 +136,7 @@ export async function GET(req) {
       // Live window
       if (isDue("live", sentLive)) {
         await sendLiveNow({ name, phone10, webinarDate, webinarDay, webinarTime });
-        await markCell(sheetRowNumber, LETTER_SENT_LIVE, "yes");
+        await markCell(sheetRowNumber, LEAD_STATUS_COLUMNS.live, "yes");
         sentCount.live++;
         console.log("SEND LIVE", { sheetRowNumber, diffMin, webinarISO });
         continue;

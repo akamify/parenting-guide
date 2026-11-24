@@ -2,6 +2,19 @@
 import { google } from "googleapis";
 import { cleanPhone10 } from "./phone";
 
+export const LEAD_STATUS_COLUMNS = {
+  confirmation: "J",
+  "1day": "K",
+  morning: "L",
+  "10min": "M",
+  live: "N",
+};
+
+export function readLeadStatus(row, type) {
+  const index = LEAD_STATUS_COLUMNS[type].charCodeAt(0) - "A".charCodeAt(0);
+  return String(row[index] || "no").trim().toLowerCase();
+}
+
 function maskSheetId(value) {
   const str = String(value || "");
   if (str.length <= 12) return str ? "***" : "";
@@ -93,10 +106,10 @@ export async function saveToSheet({
     webinarISO || "",                   // I
     "no",                               // J sentConfirmation
     reminderStatus("1day"),             // K sent1Day
-    reminderStatus("morning"),          // O sentMorning
-    reminderStatus("10min"),            // L sent10Min
-    reminderStatus("live"),             // M sentLive
-    leadId || "",                       // N leadId
+    reminderStatus("morning"),          // L sentMorning
+    reminderStatus("10min"),            // M sent10Min
+    reminderStatus("live"),             // N sentLive
+    leadId || "",                       // O leadId
   ]];
 
   const res = await runSheetRequest(() =>
@@ -116,7 +129,6 @@ export async function saveToSheet({
   return { success: true, rowNumber };
 }
 
-// Older rows may have the lead ID in O instead of N.
 export async function findRowByLeadId(leadId) {
   if (!leadId) return null;
   const sheets = await getSheets();
@@ -124,18 +136,15 @@ export async function findRowByLeadId(leadId) {
   const res = await runSheetRequest(() =>
     sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: "Sheet1!N:O",
+      range: "Sheet1!O:O",
     })
   );
 
   const rows = res.data.values || [];
   // rows[0] is header
-  for (let i = 1; i < rows.length; i++) {
-    if (rows[i]?.some((value) => String(value) === String(leadId))) {
-      return i + 1; // sheet row number
-    }
-  }
-  return null;
+  const id = String(leadId);
+  const rowIndex = rows.findIndex((row, i) => i > 0 && String(row[0]) === id);
+  return rowIndex === -1 ? null : rowIndex + 1;
 }
 
 // ✅ Mark a single cell (e.g. J12 = "yes")
@@ -185,7 +194,7 @@ export async function findActiveLeadByContact({ email, phone10, now = new Date()
     const rowEmail = String(row[2] || "").trim().toLowerCase();
     const rowPhoneRaw = String(row[3] || "").trim();
     const rowWebinarISO = String(row[8] || "").trim();
-    const rowSentLive = String(row[12] || "no").trim().toLowerCase();
+    const rowSentLive = readLeadStatus(row, "live");
 
     let rowPhone = "";
     try {

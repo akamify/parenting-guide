@@ -13,7 +13,9 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { cleanPhone10 } from "../lib/phone";
 import { formatWebinarParts, getNextWebinarDate } from "../lib/webinar";
+import WhatsAppContactButton from "./WhatsAppContactButton";
 
 // --- PARENTING TEXT DATA ---
 const calculateWebinarData = () => {
@@ -90,11 +92,7 @@ export default function LearningForm({ showStickyBar = true }) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      let formattedPhone = formData.phone.trim();
-      if (formattedPhone.startsWith("+91"))
-        formattedPhone = formattedPhone.substring(3);
-      else if (formattedPhone.startsWith("91"))
-        formattedPhone = formattedPhone.substring(2);
+      const formattedPhone = cleanPhone10(formData.phone);
 
       const response = await fetch("/api/whatsapp", {
         method: "POST",
@@ -224,24 +222,27 @@ export default function LearningForm({ showStickyBar = true }) {
                   </div>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className={`w-full group mt-4 font-black text-sm uppercase tracking-[0.2em] py-5 rounded-2xl transition-all duration-500 shadow-xl flex items-center justify-center gap-3 ${
-                    isSubmitting
-                      ? "bg-stone-200 text-stone-400"
-                      : "bg-[#4A2B12] hover:border hover:border-[#4A2B12] hover:text-[#4A2B12] cursor-pointer hover:bg-white text-white"
-                  }`}
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      Register Now — Free{" "}
-                      <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    </>
-                  )}
-                </button>
+                <div className="mt-4 flex items-stretch gap-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className={`group min-w-0 flex-1 font-black text-sm uppercase tracking-[0.2em] px-2 py-5 rounded-2xl transition-all duration-500 shadow-xl flex items-center justify-center gap-2 ${
+                      isSubmitting
+                        ? "bg-stone-200 text-stone-400"
+                        : "bg-[#4A2B12] hover:border hover:border-[#4A2B12] hover:text-[#4A2B12] cursor-pointer hover:bg-white text-white"
+                    }`}
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        Register Now — Free{" "}
+                        <ChevronRight className="w-5 h-5 shrink-0 group-hover:translate-x-1 transition-transform" />
+                      </>
+                    )}
+                  </button>
+                  <WhatsAppContactButton />
+                </div>
               </form>
             </div>
           </div>
@@ -328,12 +329,15 @@ export default function LearningForm({ showStickyBar = true }) {
               </div>
             </div>
 
-            <button
-              onClick={() => (window.location.href = "/form")}
-              className="hover:bg-white bg-[#4A2B12] text-white hover:text-[#4A2B12] hover:border hover:border-[#4A2B12] cursor-pointer font-black text-xs sm:text-sm tracking-[0.2em] px-4 sm:px-12 py-4 rounded-2xl transition-all duration-500 shadow-lg active:scale-95 uppercase flex items-center gap-2"
-            >
-              FREE ACCESS <ChevronRight className="w-4 h-4" />
-            </button>
+            <div className="flex items-stretch gap-2">
+              <button
+                onClick={() => (window.location.href = "/form")}
+                className="hover:bg-white bg-[#4A2B12] text-white hover:text-[#4A2B12] hover:border hover:border-[#4A2B12] cursor-pointer font-black text-xs sm:text-sm tracking-[0.2em] px-4 sm:px-12 py-4 rounded-2xl transition-all duration-500 shadow-lg active:scale-95 uppercase flex items-center gap-2"
+              >
+                FREE ACCESS <ChevronRight className="w-4 h-4" />
+              </button>
+              <WhatsAppContactButton />
+            </div>
           </div>
         </div>
       )}

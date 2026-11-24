@@ -1,7 +1,7 @@
 // src/app/api/qstash/route.js
 import { NextResponse } from "next/server";
 import { verifyQstashRequest } from "../../lib/qstash";
-import { findRowByLeadId, markCell } from "../../lib/googleSheet";
+import { findRowByLeadId, LEAD_STATUS_COLUMNS, markCell } from "../../lib/googleSheet";
 import {
   isWhatsAppSendingEnabled,
   send1DayReminder,
@@ -10,11 +10,11 @@ import {
   sendLiveNow,
 } from "../../lib/waspakamify";
 
-const REMINDER_COLUMNS = {
-  "1day": "K",
-  morning: "O",
-  "10min": "L",
-  live: "M",
+const REMINDER_SENDERS = {
+  "1day": send1DayReminder,
+  morning: sendMorningReminder,
+  "10min": send10MinReminder,
+  live: sendLiveNow,
 };
 
 export async function POST(req) {
@@ -43,13 +43,7 @@ export async function POST(req) {
       return NextResponse.json({ ok: false, message: "Missing payload fields" }, { status: 400 });
     }
 
-    let targetRow = null;
-    if (leadId) {
-      targetRow = await findRowByLeadId(leadId);
-    }
-    if (!targetRow && rowNumber) {
-      targetRow = rowNumber;
-    }
+    const targetRow = leadId ? await findRowByLeadId(leadId) : rowNumber;
     if (!targetRow) {
       return NextResponse.json({ ok: false, message: "Row not found" }, { status: 404 });
     }
@@ -57,9 +51,8 @@ export async function POST(req) {
     console.log("QSTASH RECEIVED", { type, rowNumber: targetRow, leadId, phone10, webinarDate, webinarDay, webinarTime });
 
     if (!isWhatsAppSendingEnabled()) {
-      const column = REMINDER_COLUMNS[type];
-      if (column) {
-        await markCell(targetRow, column, "disabled");
+      if (Object.hasOwn(REMINDER_SENDERS, type)) {
+        await markCell(targetRow, LEAD_STATUS_COLUMNS[type], "disabled");
       }
       console.log("QSTASH WHATSAPP SKIPPED", {
         type,
@@ -69,25 +62,13 @@ export async function POST(req) {
       return NextResponse.json({ ok: true, skipped: true });
     }
 
-    if (type === "1day") {
-      await send1DayReminder({ name, phone10, webinarDate, webinarDay, webinarTime });
-      await markCell(targetRow, "K", "yes");
-      console.log("QSTASH SENT 1DAY", { rowNumber: targetRow });
-    } else if (type === "morning") {
-      await sendMorningReminder({ name, phone10, webinarDate, webinarDay, webinarTime });
-      await markCell(targetRow, "O", "yes");
-      console.log("QSTASH SENT MORNING", { rowNumber: targetRow });
-    } else if (type === "10min") {
-      await send10MinReminder({ name, phone10, webinarDate, webinarDay, webinarTime });
-      await markCell(targetRow, "L", "yes");
-      console.log("QSTASH SENT 10MIN", { rowNumber: targetRow });
-    } else if (type === "live") {
-      await sendLiveNow({ name, phone10, webinarDate, webinarDay, webinarTime });
-      await markCell(targetRow, "M", "yes");
-      console.log("QSTASH SENT LIVE", { rowNumber: targetRow });
-    } else {
+    if (!Object.hasOwn(REMINDER_SENDERS, type)) {
       return NextResponse.json({ ok: false, message: "Unknown job type" }, { status: 400 });
     }
+
+    await REMINDER_SENDERS[type]({ name, phone10, webinarDate, webinarDay, webinarTime });
+    await markCell(targetRow, LEAD_STATUS_COLUMNS[type], "yes");
+    console.log("QSTASH SENT", { type, rowNumber: targetRow });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

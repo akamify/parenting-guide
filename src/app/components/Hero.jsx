@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import WhatsAppContactButton from "./WhatsAppContactButton";
 
 const MobileHero = () => {
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -119,12 +120,15 @@ const MobileHero = () => {
 
         {/* Action Card - High Contrast UI */}
         <div className="w-full bg-white/80 backdrop-blur-xl rounded-[2.5rem] border border-white shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] p-4 flex flex-col items-center justify-center text-center mt-4">
-          <button
-            onClick={() => (window.location.href = "/form")}
-            className="w-full py-5 rounded-2xl bg-gradient-to-r from-[#4A2B12] via-[#D99B38] to-[#4A2B12] bg-[length:200%_auto] hover:bg-right text-white text-lg font-black uppercase tracking-[0.05em] shadow-[0_10px_40px_-5px_rgba(217,155,56,0.5)] shadow-xl hover:shadow-[0_20px_50px_-5px_rgba(217,155,56,0.6)] active:scale-[0.98] transition-all duration-500 transform"
-          >
-            Register Now — Free
-          </button>
+          <div className="flex w-full items-stretch gap-2">
+            <button
+              onClick={() => (window.location.href = "/form")}
+              className="min-w-0 flex-1 px-2 py-5 rounded-2xl bg-gradient-to-r from-[#4A2B12] via-[#D99B38] to-[#4A2B12] bg-[length:200%_auto] hover:bg-right text-white text-lg font-black uppercase tracking-[0.05em] shadow-[0_10px_40px_-5px_rgba(217,155,56,0.5)] shadow-xl hover:shadow-[0_20px_50px_-5px_rgba(217,155,56,0.6)] active:scale-[0.98] transition-all duration-500 transform"
+            >
+              Register Now — Free
+            </button>
+            <WhatsAppContactButton />
+          </div>
 
           <div className="relative inline-block mt-6">
             <p className="text-gray-500 text-lg font-bold line-through decoration-[#2D1A0A]/50 mb-[-8px]">

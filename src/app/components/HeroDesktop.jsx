@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import WhatsAppContactButton from "./WhatsAppContactButton";
 
 const HeroDesktop = () => {
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -104,12 +105,15 @@ const HeroDesktop = () => {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => (window.location.href = "/form")}
-                  className="w-full sm:flex-1 py-5 px-10 bg-[#2a180a] hover:bg-gradient-to-l hover:from-brand-brown hover:to-[#2a180a] text-white font-black uppercase tracking-wider rounded-[1rem] shadow-xl hover:shadow-2xl transition-all duration-500 transform  active:scale-95 cursor-pointer animate-btn-breath transform-gpu transition-all duration-500 ease-out hover:-translate-y-1hover:scale-[1.02] hover:text-brand-brown hover:tracking-wide hover:scale-[1.03] active:scale-[0.98]"
-                >
-                  Register Now — Free
-                </button>
+                <div className="flex w-full min-w-0 items-stretch gap-2 sm:flex-1">
+                  <button
+                    onClick={() => (window.location.href = "/form")}
+                    className="min-w-0 flex-1 py-5 px-3 lg:px-5 bg-[#2a180a] hover:bg-gradient-to-l hover:from-brand-brown hover:to-[#2a180a] text-white font-black uppercase tracking-wider rounded-[1rem] shadow-xl hover:shadow-2xl transition-all duration-500 transform  active:scale-95 cursor-pointer animate-btn-breath transform-gpu transition-all duration-500 ease-out hover:-translate-y-1hover:scale-[1.02] hover:text-brand-brown hover:tracking-wide hover:scale-[1.03] active:scale-[0.98]"
+                  >
+                    Register Now — Free
+                  </button>
+                  <WhatsAppContactButton />
+                </div>
               </div>
 
               {/* Mentor Info Card */}

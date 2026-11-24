@@ -9,7 +9,7 @@ const testimonials = [
     title: "Understanding My Child's Tantrums",
     description:
       "I was struggling with my 4-year-old's daily meltdowns. Advisor Pravesh Kumar's techniques helped me understand the 'why' behind the behavior. Now, our home is much more peaceful, and I feel like a more confident parent.",
-    videoId: "dQw4w9WgXcQ",
+    videoId: "a7Erj5JUdnc",
     thumbnail: "/testimonials/img1.avif",
   },
   {
